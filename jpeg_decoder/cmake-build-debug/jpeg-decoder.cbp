@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="jpeg-decoder"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;CMake Files\..\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="test_baseline">
+				<Option output="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/test_baseline" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/include"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/."/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../commons"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/gtest"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/gmock"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/benchmark/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/9.1.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 test_baseline"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="test_baseline/fast">
+				<Option output="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/test_baseline" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/include"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/."/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../commons"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/gtest"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/gmock"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/benchmark/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/9.1.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 test_baseline/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="test_decoder">
+				<Option output="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/test_decoder" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/include"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/."/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../commons"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/gtest"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/gmock"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/benchmark/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/9.1.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 test_decoder"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="test_decoder/fast">
+				<Option output="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/test_decoder" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/include"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/."/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../commons"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/gtest"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/gmock"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/benchmark/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/9.1.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 test_decoder/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="test_progressive">
+				<Option output="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/test_progressive" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/include"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/."/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../commons"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/gtest"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/gmock"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/benchmark/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/9.1.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 test_progressive"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="test_progressive/fast">
+				<Option output="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/test_progressive" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/include"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/."/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../commons"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/gtest"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/gmock"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/benchmark/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/9.1.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 test_progressive/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="decoder-lib">
+				<Option output="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/libdecoder-lib.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/include"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/."/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../commons"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/gtest"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/gmock"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/benchmark/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/9.1.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 decoder-lib"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="decoder-lib/fast">
+				<Option output="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/libdecoder-lib.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/include"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/."/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../commons"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/gtest"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/gmock"/>
+					<Add directory="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../contrib/benchmark/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/9.1.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 decoder-lib/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/Users/romanmarakulin/Projects/jpeg_decoder/contrib/catch_main.cpp">
+			<Option target="test_baseline"/>
+			<Option target="test_decoder"/>
+			<Option target="test_progressive"/>
+		</Unit>
+		<Unit filename="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/src/decoder.cpp">
+			<Option target="decoder-lib"/>
+		</Unit>
+		<Unit filename="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/src/reader.cpp">
+			<Option target="decoder-lib"/>
+		</Unit>
+		<Unit filename="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/src/test_baseline.cpp">
+			<Option target="test_baseline"/>
+		</Unit>
+		<Unit filename="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/src/test_decoder.cpp">
+			<Option target="test_decoder"/>
+		</Unit>
+		<Unit filename="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/src/test_progressive.cpp">
+			<Option target="test_progressive"/>
+		</Unit>
+		<Unit filename="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+		<Unit filename="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/FindFFTW.cmake">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+		<Unit filename="/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/../common.cmake">
+			<Option virtualFolder="CMake Files\..\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>
