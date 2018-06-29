@@ -18,7 +18,7 @@ uint8_t ByteStreamReader::ReadHalfByte() {
     if (cache_size_ <= 4) { // then, we have half of byte in cache
         uint8_t result = cache_ >> 4;
         cache_ = (cache_ << 4) & 0xff;
-        cache_size_ -= 4;
+        cache_size_ += 4;
         return result;
     }
     uint8_t result = 0;
@@ -60,8 +60,16 @@ bool ByteStreamReader::IsEnded() const {
     return stream_.eof() and (cache_size_ == MAX_CACHE_SIZE);
 }
 
+bool ByteStreamReader::IsCacheEmpty() const {
+    return cache_size_ == MAX_CACHE_SIZE;
+}
+
 uint8_t ByteStreamReader::ReadRawByte() {
     uint8_t byte;
     stream_.read((char*)&byte, 1);
+    std::cout << std::hex << int(byte) << "\n";
+    if (!stream_) {
+        std::cout << "END\n";
+    }
     return byte;
 }

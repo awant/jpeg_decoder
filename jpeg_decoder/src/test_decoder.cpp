@@ -4,6 +4,7 @@
 
 #include "decoder.h"
 
+
 TEST_CASE("Bytes stream reading", "[ByteStreamReader]") {
     {
         uint8_t a1 = 0xff, a2 = 0x3f, a3 = 0x56, a4 = 0x12;
@@ -20,6 +21,21 @@ TEST_CASE("Bytes stream reading", "[ByteStreamReader]") {
         }
         REQUIRE(reader.ReadWord() == word);
     }
+}
+
+TEST_CASE("Matrix operations", "[Matrix]") {
+    const std::vector<int> values = {0,2,3,5,9,2,7,3,4};
+    size_t size = 8;
+    auto dht_table = SquareMatrix<int>::CreateFromZigZag(values, size, 0xff);
+    std::vector<int> array{0x0, 0x2, 0x2, 0x7, 0xff, 0xff, 0xff, 0xff,
+                           0x3, 0x9, 0x3, 0xff, 0xff, 0xff, 0xff, 0xff,
+                           0x5, 0x4, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+    for (int i = 0; i < (64-24); ++i) {
+        array.push_back(0xff);
+    }
+    auto true_dht_table = SquareMatrix<int>(array, 8);
+
+    REQUIRE(dht_table == true_dht_table);
 }
 
 TEST_CASE("Huffman tree construction", "[HuffmanTree]") {
@@ -39,21 +55,7 @@ TEST_CASE("Huffman tree construction", "[HuffmanTree]") {
 //    REQUIRE(val == 0x12);
 }
 
-TEST_CASE("Matrix operations", "[Matrix]") {
-    const std::vector<int> values = {0,2,3,5,9,2,7,3,4};
-    size_t size = 8;
-    auto dht_table = SquareMatrix<int>::CreateFromZigZag(values, size, 0xff);
-    std::vector<int> array{0x0, 0x2, 0x2, 0x7, 0xff, 0xff, 0xff, 0xff,
-                           0x3, 0x9, 0x3, 0xff, 0xff, 0xff, 0xff, 0xff,
-                           0x5, 0x4, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-    for (int i = 0; i < (64-24); ++i) {
-        array.push_back(0xff);
-    }
-    auto true_dht_table = SquareMatrix<int>(array, 8);
-    REQUIRE(dht_table == true_dht_table);
-}
-
-//TEST_CASE("Check fft tranform", "[FFT]") {
+//TEST_CASE("Check fft transform", "[FFT]") {
 //    {
 //        fftw_plan plan;
 //        int n0 = 2, n1 = 2;

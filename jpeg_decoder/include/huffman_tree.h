@@ -65,10 +65,9 @@ public:
         return Iterator(tree_.get());
     }
 
-
-    void Print();
+    void Dump();
 private:
-    void Print(Node<T>* node, const std::string& cur_path);
+    void Dump(Node<T>* node, std::string cur_path);
 
     std::unique_ptr<Node<T>> tree_ = nullptr;
 
@@ -140,5 +139,23 @@ void HuffmanTree<T>::SetNewNode(const T& val, int len) {
         }
         current_node_ = node;
         SetNewNode(val, len-1);
+    }
+}
+
+template<class T>
+void HuffmanTree<T>::Dump() {
+    Dump(tree_.get(), "");
+}
+
+template<class T>
+void HuffmanTree<T>::Dump(Node<T>* node, std::string cur_path) {
+    if ((node->left == nullptr) and (node->right == nullptr)) {
+        std::cout << cur_path << " = " << node->value << "\n";
+    }
+    if (node->left != nullptr) {
+        Dump(node->left.get(), cur_path + '0');
+    }
+    if (node->right != nullptr) {
+        Dump(node->right.get(), cur_path + '1');
     }
 }

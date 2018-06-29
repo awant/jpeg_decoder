@@ -152,7 +152,7 @@ public:
 
     void Dump(std::ostream& os = std::cout) {
         os << "size: " << height_ << "x" << width_ << "\n";
-        os << std::hex;
+        os << std::dec;
         for (size_t i = 0; i < height_; ++i) {
             for (size_t j = 0; j < width_; ++j) {
                 os << buffer_[i][j] << "\t";
@@ -202,30 +202,3 @@ public:
         return *this;
     }
 };
-
-//template <class T>
-//Matrix<double> IDCT_JPG(Matrix<T>& matrix) {
-//    if (matrix.GetWidth() != matrix.GetHeight()) {
-//        throw std::runtime_error("Support only square matrices");
-//    }
-//    size_t size = matrix.GetHeight();
-//    Matrix<double> coeffs(size, 1.0);
-//    coeffs.at(0, 0) = 0.5;
-//    for (size_t i = 0; i < size; ++i) {
-//        coeffs.at(0, i) = 1/sqrt(2);
-//        coeffs.at(i, 0) = 1/sqrt(2);
-//    }
-//    coeffs.Multiply(matrix);
-//
-//    auto* in = new double[size*size];
-//    coeffs.Fill(in);
-//
-//    fftw_plan plan = fftw_plan_r2r_2d(size, size, in, in, FFTW_REDFT01, FFTW_REDFT01, FFTW_ESTIMATE);
-//    fftw_execute(plan);
-//    fftw_destroy_plan(plan);
-//
-//    Matrix<double> result(in, size, size);
-//    delete[] in;
-//
-//    return result.Dot(0.25);
-//}

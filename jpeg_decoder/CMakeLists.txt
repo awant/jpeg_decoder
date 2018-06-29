@@ -13,6 +13,7 @@ find_package(FFTW REQUIRED)
 include_directories(${FFTW_INCLUDES})
 
 include_directories(include)
+include_directories(logger)
 
 include(../common.cmake)
 
@@ -23,15 +24,18 @@ add_library(decoder-lib
 
 add_executable(test_baseline
   src/test_baseline.cpp
-  ../contrib/catch_main.cpp)
+  ../contrib/catch_main.cpp
+        )
 
 add_executable(test_progressive
   src/test_progressive.cpp
-  ../contrib/catch_main.cpp)
+  ../contrib/catch_main.cpp
+        )
 
 add_executable(test_decoder
   src/test_decoder.cpp
-  ../contrib/catch_main.cpp)
+  ../contrib/catch_main.cpp
+        )
 
 # don't forget to link them
 

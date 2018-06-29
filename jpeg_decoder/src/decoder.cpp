@@ -1,4 +1,7 @@
+#include <cmath>
+
 #include "decoder.h"
+
 
 Image Decode(const std::string& filename) {
 
@@ -36,7 +39,7 @@ bool JPGDecoder::IsValidFormat() {
 }
 
 void JPGDecoder::ParseJPG() {
-    for (int i = 0; i < 30; ++i) {
+    for (int i = 0; i < 200; ++i) {
         ParseNextSection();
     }
 }
@@ -60,7 +63,7 @@ void JPGDecoder::ParseNextSection() {
             ParseSOS();
             break;
         default:
-             throw std::runtime_error("Unknown marker");
+            std::cout << std::hex << "skip marker: " << std::hex << marker << std::endl;
     }
 }
 
@@ -83,26 +86,34 @@ void JPGDecoder::ParseDHT() {
     int size = reader_.ReadWord();
     auto coeff_type = static_cast<CoeffType>(reader_.ReadHalfByte());
     int table_id = reader_.ReadHalfByte();
+    std::cout << "type: " << coeff_type << " table id: " << table_id << std::endl;
 
     std::vector<int> codes_counters(16);
     size_t codes_counter = 0;
     for (size_t i = 0; i < 16; ++i) {
         codes_counters[i] = reader_.ReadByte();
         codes_counter += codes_counters[i];
+        std::cout << "Codes of length " << i << " bits: " << codes_counters[i] << "\n";
     }
     assert((size-16-3) == codes_counter);
     std::vector<int> values(codes_counter);
+    std::cout << "codes: ";
     for (size_t i = 0; i < codes_counter; ++i) {
         values[i] = reader_.ReadByte();
+        std::cout << values[i] << ", ";
     }
+    std::cout << "\n";
 
     DHTDescriptor descriptor{table_id, coeff_type};
 
     HuffmanTree<int> tree(codes_counters, values);
+    tree.Dump();
     huffman_trees_.emplace(descriptor, std::move(tree));
 }
 
 void JPGDecoder::ParseDQT() {
+    // Quantization table
+    std::cout << "--- ParseDQT ---" << std::endl;
     int size = reader_.ReadWord() - 3;
     if (size <= 0) {
         throw std::runtime_error("DHT size corrupted");
@@ -113,6 +124,8 @@ void JPGDecoder::ParseDQT() {
     size_t values_count = static_cast<size_t>(size) / value_size;
     assert(values_count == 64);
 
+    std::cout << "value size: " << values_count << " table id: " << table_id << std::endl;
+
     std::vector<int> values(values_count);
     for (size_t i = 0; i < values_count; ++i) {
         values[i] = value_size == 1 ? reader_.ReadByte() : reader_.ReadWord();
@@ -121,60 +134,82 @@ void JPGDecoder::ParseDQT() {
 }
 
 void JPGDecoder::ParseSOF0() {
-//    std::cout << "ParseSOF0" << std::endl;
-//    int size = byte_reader_.GetNextWord();
-//    int precision = byte_reader_.GetNext();
-//    height_ = byte_reader_.GetNextWord();
-//    width_ = byte_reader_.GetNextWord();
-//    std::cout << "size: " << size << ", precision: " << precision << "\n";
-//    std::cout << "height: " << height_ << ", width: " << width_ << "\n";
-//    int components_count = byte_reader_.GetNext();
-//    if (components_count != 3) {
-//        throw std::runtime_error("SOF0: unsupported components count");
-//    }
-//    int max_horizontal_thinning = 0, max_vertical_thinning = 0;
-//    for (size_t i = 0; i < 3; ++i) {
-//        sof0_descriptors_[i].id = byte_reader_.GetNext();
-//        sof0_descriptors_[i].horizontal_thinning = byte_reader_.GetNextHalfByte();
-//        sof0_descriptors_[i].vertical_thinning = byte_reader_.GetNextHalfByte();
-//        sof0_descriptors_[i].dqt_table_id = byte_reader_.GetNext();
-//        std::cout << "component" << i << ": ";
-//        std::cout << sof0_descriptors_[i].id << ", ";
-//        std::cout << "subsamp: " << sof0_descriptors_[i].horizontal_thinning << ", ";
-//        std::cout << sof0_descriptors_[i].vertical_thinning << ", ";
-//        std::cout << "qtable: " << sof0_descriptors_[i].dqt_table_id << "\n";
-//        max_horizontal_thinning = std::max(max_horizontal_thinning, sof0_descriptors_[i].horizontal_thinning);
-//        max_vertical_thinning = std::max(max_vertical_thinning, sof0_descriptors_[i].vertical_thinning);
-//    }
-//    for (size_t i = 0; i < 3; ++i) {
-//        sof0_descriptors_[i].horizontal_thinning = max_horizontal_thinning / sof0_descriptors_[i].horizontal_thinning;
-//        sof0_descriptors_[i].vertical_thinning = max_vertical_thinning / sof0_descriptors_[i].vertical_thinning;
-//    }
+    std::cout << "--- ParseSOF0 ---" << std::endl;
+    int size = reader_.ReadWord();
+    int precision = reader_.ReadByte();
+    assert(precision == 8);
+
+    height_ = reader_.ReadWord();
+    width_ = reader_.ReadWord();
+
+    int components_count = reader_.ReadByte();
+    assert(components_count == 3);
+
+    std::cout << "precision: " << std::dec << precision
+              << " size: (" << height_ << ", " << width_ << ") "
+              << "components: " << components_count << std::endl;
+
+    int max_horizontal_thinning = 0, max_vertical_thinning = 0;
+    sof0_descriptors_.resize(4);
+
+    // 1 22 0 2 11 1 3 11 1 ff
+    for (size_t i = 0; i < components_count; ++i) {
+        int id = reader_.ReadByte();
+        std::cout << "ch id: " << id;
+        assert(id < 4 && id >= 0);
+        int horizontal_thinning = reader_.ReadHalfByte();
+        int vertical_thinning = reader_.ReadHalfByte();
+
+        int dqt_table_id = reader_.ReadByte();
+
+        sof0_descriptors_[id] = ChannelDescriptor{
+                horizontal_thinning,
+                vertical_thinning,
+                dqt_table_id
+        };
+        std::cout << " thinning: (" << horizontal_thinning << ", " << vertical_thinning << ") "
+                  << "dqt_table_id: " << dqt_table_id << std::endl;
+
+        max_horizontal_thinning = std::max(max_horizontal_thinning, horizontal_thinning);
+        max_vertical_thinning = std::max(max_vertical_thinning, vertical_thinning);
+    }
+    for (size_t i = 1; i < components_count+1; ++i) {
+        sof0_descriptors_[i].horizontal_thinning = max_horizontal_thinning / sof0_descriptors_[i].horizontal_thinning;
+        sof0_descriptors_[i].vertical_thinning = max_vertical_thinning / sof0_descriptors_[i].vertical_thinning;
+    }
 }
 
 void JPGDecoder::ParseSOS() {
-//    std::cout << "ParseSOS" << std::endl;
-//    int header_size = byte_reader_.GetNextWord();
-//    std::cout << "header_size: " << std::dec << header_size << "\n";
-//    int components_count = byte_reader_.GetNext();
-//    if (components_count != 3) {
-//        throw std::runtime_error("SOS: unsupported components count");
-//    }
-//    for (int i = 0; i < 3; ++i) {
-//        int id = byte_reader_.GetNext();
-//        sos_descriptors_[id].huffman_table_dc_id = byte_reader_.GetNextHalfByte();
-//        sos_descriptors_[id].huffman_table_ac_id = byte_reader_.GetNextHalfByte();
-//        std::cout << "comp[" << id << "]: ";
-//        std::cout << "dc: " << sos_descriptors_[id].huffman_table_dc_id << " ac: ";
-//        std::cout << sos_descriptors_[id].huffman_table_ac_id << "\n";
-//    }
-//    header_size -= 9;
-//    for (int i = 0; i < header_size; ++i) {
-//        byte_reader_.GetNext();
-//    }
-//
-//    std::cout << "offset: 0x" << std::hex << is_.tellg() << "\n";
-//    FillChannelTables();
+    std::cout << "--- ParseSOS ---" << std::endl;
+    int header_size = reader_.ReadWord();
+    std::cout << "header_size: " << std::dec << header_size << "\n";
+    int components_count = reader_.ReadByte();
+    assert(components_count == 3);
+
+    const int max_channel_id = 4;
+    sos_descriptors_.resize(max_channel_id);
+
+    for (int i = 0; i < components_count; ++i) {
+        int channel_id = reader_.ReadByte();
+        assert((channel_id < 4) && (channel_id >= 0));
+
+        int huffman_table_dc_id = reader_.ReadHalfByte();
+        int huffman_table_ac_id = reader_.ReadHalfByte();
+
+        sos_descriptors_[channel_id] = SOSDescriptor{
+                huffman_table_dc_id,
+                huffman_table_ac_id
+        };
+        std::cout << "channel id: " << channel_id
+                  << " dc table: " << huffman_table_dc_id
+                  << " ac table: " << huffman_table_ac_id << "\n";
+    }
+    header_size -= 9;
+    for (int i = 0; i < header_size; ++i) {
+        reader_.ReadByte();
+    }
+    // read and decode real data
+    FillChannelTables();
 }
 
 
@@ -211,79 +246,103 @@ int JPGDecoder::GetNextHuffmanNodeVal(HuffmanTreeInt& huffman_tree) {
     }
     return *it;
 }
+*/
 
-int JPGDecoder::NextBitsToCoeff(int count) {
-    int coeff = 0;
-    uint degree = 0;
-    for (int i = 0; i < count; ++i) {
-        coeff <<= 1;
-        coeff |= bit_reader_.GetNext();
-        degree = (degree << 1) + 1;
+int JPGDecoder::GetNextLeafValue(HuffmanTreeInt::Iterator& huffman_tree_it) {
+    int bit = 0;
+    while (!huffman_tree_it.Last()) {
+        bit = reader_.ReadBit();
+        if (bit == 0) {
+            huffman_tree_it.LeftStep();
+        } else if (bit == 1) {
+            huffman_tree_it.RightStep();
+        } else {
+            assert(false);
+        }
     }
-    if (((coeff >> (count-1)) & 1) == 0) {
-        coeff = -(coeff ^ degree);
-    }
-    return coeff;
+    int value = *huffman_tree_it;
+    return value;
 }
 
-int JPGDecoder::GetDCCoeff(const DHTDescriptor& desc) {
-    std::cout << "GetDCCoeff\n";
-    std::cout << "table_id: " << desc.table_id << ", class: " << desc.table_class << "\n";
-    auto& huffman_tree = huffman_trees_.find(desc)->second;
-    int node_val = GetNextHuffmanNodeVal(huffman_tree);
-    std::cout << "node_val: " << node_val << "\n";
-    if (node_val == 0) {
-        return node_val;
+int JPGDecoder::NextBitsToACDCCoeff(int length) {
+    int value = 0;
+    bool inversed_value = false;
+    for (int i = 0; i < length; ++i) {
+        value = (value << 1) | reader_.ReadBit();
+        if ((i == 0) && (value == 0)) { // if first bit is 0, then inverse
+            inversed_value = true;
+        }
     }
-    int coeff = NextBitsToCoeff(node_val);
-    std::cout << "dc coeff: " << coeff << "\n";
-    return coeff;
+//    std::cout << "NextBitsToACDCCoeff\n";
+//    std::cout << "value: " << value << "\ninversed_value: " << inversed_value << "\n";
+    if (inversed_value) {
+        value = value - std::pow(2.0, length) + 1;
+    }
+    return value;
 }
 
-std::pair<int, int> JPGDecoder::GetACCoeffs(const DHTDescriptor& desc, bool* end) {
-    std::cout << "GetACCoeffs\n";
-    std::cout << "table_id: " << desc.table_id << ", class: " << desc.table_class << "\n";
-    auto& huffman_tree = huffman_trees_.find(desc)->second;
-    int node_val = GetNextHuffmanNodeVal(huffman_tree);
-    std::cout << "node_val: " << node_val << "\n";
-    if (node_val == 0) {
-        *end = true;
-        return std::make_pair(node_val, node_val);
+
+int JPGDecoder::GetDCCoeff(int channel_id) {
+    int table_id = sos_descriptors_[channel_id].huffman_table_dc_id;
+    DHTDescriptor descriptor{table_id, DC};
+    const auto& huffman_tree_pair_it = huffman_trees_.find(descriptor);
+    assert(huffman_tree_pair_it != huffman_trees_.end());
+    auto it = huffman_tree_pair_it->second.Begin();
+
+    int value = GetNextLeafValue(it);
+    if (value == 0) {
+        return value;
     }
-    *end = false;
-    int zeros_count = node_val >> 4;
-    int bits_count = node_val & 0xf;
-//    std::cout << "bits_count: " << bits_count << "\n";
-    int coeff = NextBitsToCoeff(bits_count);
-//    std::cout << "ac coeffs: " << zeros_count << " " << coeff << "\n";
-    return std::make_pair(zeros_count, coeff);
+    // then value is length of coeff in bits
+    int length = value;
+    value = NextBitsToACDCCoeff(length);
+    return value;
 }
 
-Table JPGDecoder::GetNextChannelTable(int component_id) {
-    std::cout << "GetNextChannelTable\n";
-    std::vector<int> values;
+// return pair: (number of zeros, coeff value)
+// number of zeros = -1 means all rest values are zeros
+std::pair<int, int> JPGDecoder::GetACCoeffs(int channel_id) {
+    int table_id = sos_descriptors_[channel_id].huffman_table_ac_id;
+    DHTDescriptor descriptor{table_id, AC};
+    const auto& huffman_tree_pair_it = huffman_trees_.find(descriptor);
+    assert(huffman_tree_pair_it != huffman_trees_.end());
+    auto it = huffman_tree_pair_it->second.Begin();
 
-    int table_id = sos_descriptors_[component_id].huffman_table_dc_id;
-    std::cout << "table id: " << table_id << "\n";
-    values.push_back(GetDCCoeff({table_id, DC}));
+    uint8_t value = GetNextLeafValue(it);
+    if (value == 0) {
+        return std::make_pair(-1, 0);
+    }
+//    std::cout << "ac value: " << int(value) << " ";
+    int zeros_count = value >> 4;
+    int length = value & 0xf;
+//    std::cout << "length: " << length << "\n";
+    int result = NextBitsToACDCCoeff(length);
+    return std::make_pair(zeros_count, result);
+}
 
-    table_id = sos_descriptors_[component_id].huffman_table_ac_id;
-    bool end = false;
-    while ((values.size() < 64) && !end) {
-        auto ac_coeffs = GetACCoeffs({table_id, AC}, &end);
-        if (end) {
+SquareMatrixInt JPGDecoder::GetNextChannelTable(int channel_id) {
+    std::cout << "--- GetNextChannelTable ---\n";
+    std::vector<int> coeffs;
+
+    int dc_coeff = GetDCCoeff(channel_id);
+//    std::cout << "dc coeff: " << std::hex << dc_coeff << "\n";
+
+    coeffs.push_back(dc_coeff);
+    while ((coeffs.size() < 64)) {
+        auto ac_coeffs = GetACCoeffs(channel_id);
+//        std::cout << "ac coeff: " << ac_coeffs.first << ", " << ac_coeffs.second << "\n";
+        if (ac_coeffs.first == -1) {
             break;
         }
         for (int i = 0; i < ac_coeffs.first; ++i) {
-            values.push_back(0);
+            coeffs.push_back(0);
         }
-        values.push_back(ac_coeffs.second);
+        coeffs.push_back(ac_coeffs.second);
+        //std::cout << "size: " << coeffs.size() << "\n";
     }
-
-    auto table = MakeZigZagTable(values, 8, 0);
-    std::cout << std::dec;
-    DumpTable(table);
-    return table;
+    auto matrix = SquareMatrixInt::CreateFromZigZag(coeffs, 8, 0);
+    //matrix.Dump();
+    return matrix;
 }
 
 void JPGDecoder::FillChannelTablesRound() {
@@ -292,29 +351,37 @@ void JPGDecoder::FillChannelTablesRound() {
     int prev_dc_coeff = 0;
     for (int i = 0; i < y_components_count; ++i) {
         y_channel_tables_.emplace_back(GetNextChannelTable(1));
-        if (i > 0) { // fix dc coeff
-            prev_dc_coeff += y_channel_tables_.back()[0][0];
-            y_channel_tables_.back()[0][0] = prev_dc_coeff;
-        } else {
-            prev_dc_coeff = y_channel_tables_.back()[0][0];
-        }
+
+        // fix dc coeff
+        y_channel_tables_.back().at(0, 0) += prev_dc_coeff;
+        prev_dc_coeff = y_channel_tables_.back().at(0, 0);
     }
     // cb components
     int cb_components_count = 1;
+    prev_dc_coeff = 0;
     for (int i = 0; i < cb_components_count; ++i) {
         cb_channel_tables_.emplace_back(GetNextChannelTable(2));
+
+        cb_channel_tables_.back().at(0, 0) += prev_dc_coeff;
+        prev_dc_coeff = cb_channel_tables_.back().at(0, 0);
     }
     // cr components
     int cr_components_count = 1;
+    prev_dc_coeff = 0;
     for (int i = 0; i < cr_components_count; ++i) {
         cr_channel_tables_.emplace_back(GetNextChannelTable(3));
+
+        cr_channel_tables_.back().at(0, 0) += prev_dc_coeff;
+        prev_dc_coeff = cr_channel_tables_.back().at(0, 0);
     }
 }
 
 void JPGDecoder::FillChannelTables() {
     FillChannelTablesRound();
-    std::cout << "FillChannelTables: y: " << y_channel_tables_.size() << " ";
-    std::cout << "cb: " << cb_channel_tables_.size() << " cr: " << cr_channel_tables_.size() << "\n";
+    std::cout << "\n";
+    FillChannelTablesRound();
+    std::cout << "\n";
+    FillChannelTablesRound();
+    std::cout << "\n";
+    FillChannelTablesRound();
 }
-
-*/

@@ -16,6 +16,7 @@ public:
     void Read(char* buffer, size_t size);
 
     bool IsEnded() const;
+    bool IsCacheEmpty() const;
 
 private:
     std::istream& stream_;
