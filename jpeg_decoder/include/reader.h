@@ -17,12 +17,17 @@ public:
 
     bool IsEnded() const;
     bool IsCacheEmpty() const;
+    uint16_t lastReadWord() const;
 
+
+
+    int cache_size_ = MAX_CACHE_SIZE;
 private:
     std::istream& stream_;
+    uint16_t last_read_word_;
 
     uint8_t cache_ = 0;
-    int cache_size_ = MAX_CACHE_SIZE; // CACHE_SIZE means cache is empty
+    //int cache_size_ = MAX_CACHE_SIZE; // CACHE_SIZE means cache is empty
 
     uint8_t ReadRawByte(); // read byte directly from stream
 };

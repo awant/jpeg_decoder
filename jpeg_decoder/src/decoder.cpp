@@ -24,8 +24,7 @@ Image JPGDecoder::Decode() {
         throw std::runtime_error("File doesn't have jpg format");
     }
     ParseJPG();
-//    // Processing
-//    DeQuantize();
+    DeQuantize();
     return Image();
 }
 
@@ -39,13 +38,16 @@ bool JPGDecoder::IsValidFormat() {
 }
 
 void JPGDecoder::ParseJPG() {
-    for (int i = 0; i < 200; ++i) {
+    while (!is_parsing_done_) {
         ParseNextSection();
+        is_parsing_done_ = reader_.IsEnded();
     }
 }
 
 void JPGDecoder::ParseNextSection() {
+    std::cout << "before read word: " << reader_.IsCacheEmpty() << "\n";
     auto marker = reader_.ReadWord();
+    std::cout << "MARKER: " << marker << "\n";
     switch (marker) {
         case MARKER_COMMENT:
             ParseComment();
@@ -61,6 +63,10 @@ void JPGDecoder::ParseNextSection() {
             break;
         case MARKER_SOS:
             ParseSOS();
+            break;
+        case MARKER_END:
+            std::cout << "DONE\n";
+            is_parsing_done_ = true;
             break;
         default:
             std::cout << std::hex << "skip marker: " << std::hex << marker << std::endl;
@@ -212,10 +218,7 @@ void JPGDecoder::ParseSOS() {
     FillChannelTables();
 }
 
-
-/*
 void JPGDecoder::DeQuantize() {
-    // TODO: fix this! mapping through sof0_descriptors_
     for (auto& table : y_channel_tables_) {
         Multiply(table, dqt_tables_[0]);
     }
@@ -226,27 +229,6 @@ void JPGDecoder::DeQuantize() {
         Multiply(table, dqt_tables_[1]);
     }
 }
-
-void JPGDecoder::Dump(std::ostream& os) {
-    os << "Img size: width = " << width_ << " height = " << height_ << "\n";
-    os << "Comment: " << comment_ << "\n";
-
-    os << "SOF0:\n";
-}
-
-int JPGDecoder::GetNextHuffmanNodeVal(HuffmanTreeInt& huffman_tree) {
-    auto it = huffman_tree.Begin();
-    while (!it.Last()) {
-        int bit = bit_reader_.GetNext();
-        if (bit == 0) {
-            it.LeftStep();
-        } else {
-            it.RightStep();
-        }
-    }
-    return *it;
-}
-*/
 
 int JPGDecoder::GetNextLeafValue(HuffmanTreeInt::Iterator& huffman_tree_it) {
     int bit = 0;
@@ -283,6 +265,7 @@ int JPGDecoder::NextBitsToACDCCoeff(int length) {
 
 
 int JPGDecoder::GetDCCoeff(int channel_id) {
+    std::cout << "--- GetDCCoeff ---\n";
     int table_id = sos_descriptors_[channel_id].huffman_table_dc_id;
     DHTDescriptor descriptor{table_id, DC};
     const auto& huffman_tree_pair_it = huffman_trees_.find(descriptor);
@@ -302,6 +285,7 @@ int JPGDecoder::GetDCCoeff(int channel_id) {
 // return pair: (number of zeros, coeff value)
 // number of zeros = -1 means all rest values are zeros
 std::pair<int, int> JPGDecoder::GetACCoeffs(int channel_id) {
+    std::cout << "--- GetACCoeffs ---\n";
     int table_id = sos_descriptors_[channel_id].huffman_table_ac_id;
     DHTDescriptor descriptor{table_id, AC};
     const auto& huffman_tree_pair_it = huffman_trees_.find(descriptor);
@@ -325,9 +309,9 @@ SquareMatrixInt JPGDecoder::GetNextChannelTable(int channel_id) {
     std::vector<int> coeffs;
 
     int dc_coeff = GetDCCoeff(channel_id);
-//    std::cout << "dc coeff: " << std::hex << dc_coeff << "\n";
 
     coeffs.push_back(dc_coeff);
+    //std::cout << "val: " << dc_coeff << "\n";
     while ((coeffs.size() < 64)) {
         auto ac_coeffs = GetACCoeffs(channel_id);
 //        std::cout << "ac coeff: " << ac_coeffs.first << ", " << ac_coeffs.second << "\n";
@@ -338,14 +322,21 @@ SquareMatrixInt JPGDecoder::GetNextChannelTable(int channel_id) {
             coeffs.push_back(0);
         }
         coeffs.push_back(ac_coeffs.second);
-        //std::cout << "size: " << coeffs.size() << "\n";
+        //std::cout << "val: " << dc_coeff << "\n";
     }
+    std::cout << "coeffs: ";
+    for (const auto& coeff : coeffs) {
+        std::cout << coeff << " ";
+    }
+    std::cout << "\n";
     auto matrix = SquareMatrixInt::CreateFromZigZag(coeffs, 8, 0);
-    //matrix.Dump();
+    matrix.Dump();
+    std::cout << "cache_size: " << reader_.cache_size_ << "\n";
     return matrix;
 }
 
 void JPGDecoder::FillChannelTablesRound() {
+    std::cout << "--- FillChannelTablesRound ---\n";
     // y components
     int y_components_count = 4; // horizontal = 2, vertical = 2
     int prev_dc_coeff = 0;
@@ -377,11 +368,12 @@ void JPGDecoder::FillChannelTablesRound() {
 }
 
 void JPGDecoder::FillChannelTables() {
-    FillChannelTablesRound();
-    std::cout << "\n";
-    FillChannelTablesRound();
-    std::cout << "\n";
-    FillChannelTablesRound();
-    std::cout << "\n";
-    FillChannelTablesRound();
+    while (!is_parsing_done_) {
+        try {
+            FillChannelTablesRound();
+        }
+        catch (const std::runtime_error&) {
+            return;
+        }
+    }
 }

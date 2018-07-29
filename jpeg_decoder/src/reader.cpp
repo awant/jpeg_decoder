@@ -3,49 +3,62 @@
 
 ByteStreamReader::ByteStreamReader(std::istream& stream): stream_(stream) {}
 
+uint8_t ByteStreamReader::ReadRawByte() {
+    uint8_t byte;
+    stream_.read((char*)&byte, 1);
+    if (!stream_) {
+        throw std::runtime_error("Can't read stream");
+    }
+    last_read_word_ = (last_read_word_ << 8) | byte;
+    if (last_read_word_ == 0xffd9) {
+        std::runtime_error("Read end marker");
+    }
+    return byte;
+}
+
 uint8_t ByteStreamReader::ReadBit() {
     if (cache_size_ == MAX_CACHE_SIZE) { // cache is empty
         cache_ = ReadRawByte();
         cache_size_ = 0;
     }
     uint8_t result = cache_ >> 7;
-    cache_ = (cache_ << 1) & 0xff;
+    cache_ <<= 1;
     ++cache_size_;
-    return result;
-}
-
-uint8_t ByteStreamReader::ReadHalfByte() {
-    if (cache_size_ <= 4) { // then, we have half of byte in cache
-        uint8_t result = cache_ >> 4;
-        cache_ = (cache_ << 4) & 0xff;
-        cache_size_ += 4;
-        return result;
-    }
-    uint8_t result = 0;
-    for (int i = 0; i < 4; ++i) {
-        result = (result << 1) | ReadBit();
-    }
+    std::cout << "bit: " << int(result) << "\n";
     return result;
 }
 
 uint8_t ByteStreamReader::ReadByte() {
-    if (cache_size_ == 0) {
-        uint8_t result = cache_;
-        cache_ = 0;
-        cache_size_ = MAX_CACHE_SIZE;
+    std::cout << "cache: " << int(cache_ >> cache_size_) << ", size: " << cache_size_ << "\n";
+    uint8_t result = cache_ >> cache_size_;
+    cache_ = ReadRawByte();
+    result = (result << cache_size_) | (cache_ >> (MAX_CACHE_SIZE - cache_size_));
+    cache_ <<= cache_size_;
+    return result;
+}
+
+uint8_t ByteStreamReader::ReadHalfByte() {
+    if (cache_size_ <= 4) { // when we have half of byte in cache, just get it
+        uint8_t result = cache_ >> 4;
+        cache_ <<= 4;
+        cache_size_ += 4;
+        assert(cache_size_ <= MAX_CACHE_SIZE);
         return result;
     }
-    uint8_t result = 0;
-    for (int i = 0; i < MAX_CACHE_SIZE; ++i) {
-        result = (result << 1) | ReadBit();
-    }
+    uint8_t result = cache_ >> cache_size_;
+    cache_ = ReadRawByte();
+    result = (result << (cache_size_ - 4)) | (cache_ >> (MAX_CACHE_SIZE - (cache_size_ - 4)));
+    cache_ <<= cache_size_ - 4;
+    cache_size_ = MAX_CACHE_SIZE - (cache_size_ - 4);
     return result;
 }
 
 uint16_t ByteStreamReader::ReadWord() {
     uint16_t first_byte = ReadByte();
     uint8_t second_byte = ReadByte();
-    uint16_t result = (first_byte << 8) + second_byte;
+    std::cout << "first_byte: " << int(first_byte) << "\n";
+    std::cout << "second_byte: " << int(second_byte) << "\n";
+    uint16_t result = (first_byte << 8) | second_byte;
     return result;
 }
 
@@ -57,19 +70,14 @@ void ByteStreamReader::Read(char* buffer, size_t size) {
 }
 
 bool ByteStreamReader::IsEnded() const {
-    return stream_.eof() and (cache_size_ == MAX_CACHE_SIZE);
+    return (cache_size_ == MAX_CACHE_SIZE) && !stream_;
 }
 
 bool ByteStreamReader::IsCacheEmpty() const {
     return cache_size_ == MAX_CACHE_SIZE;
 }
 
-uint8_t ByteStreamReader::ReadRawByte() {
-    uint8_t byte;
-    stream_.read((char*)&byte, 1);
-    std::cout << std::hex << int(byte) << "\n";
-    if (!stream_) {
-        std::cout << "END\n";
-    }
-    return byte;
+uint16_t ByteStreamReader::lastReadWord() const {
+    return last_read_word_;
 }
+

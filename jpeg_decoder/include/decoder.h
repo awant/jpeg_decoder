@@ -69,6 +69,7 @@ public:
     void Dump(std::ostream &os);
 
 private:
+    bool is_parsing_done_ = false; // set when parsing finished
     ByteStreamReader reader_;
 
     uint32_t height_ = 0, width_ = 0;
@@ -103,12 +104,5 @@ private:
     void FillChannelTablesRound();
     void FillChannelTables();
 
-
-//    int GetNextHuffmanNodeVal(HuffmanTreeInt& huffman_tree);
-//    int NextBitsToCoeff(int count);
-//
-//    void DeQuantize();
-//
-//
-//
+    void DeQuantize();
 };

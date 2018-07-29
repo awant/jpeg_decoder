@@ -1,2 +1,0 @@
-/Library/Developer/CommandLineTools/usr/bin/ar qc libdecoder-lib.a  CMakeFiles/decoder-lib.dir/src/decoder.cpp.o CMakeFiles/decoder-lib.dir/src/reader.cpp.o
-/Library/Developer/CommandLineTools/usr/bin/ranlib libdecoder-lib.a

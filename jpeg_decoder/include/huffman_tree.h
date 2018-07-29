@@ -37,6 +37,9 @@ public:
         }
 
         bool Last() {
+            if (!current_node_) {
+                throw std::runtime_error("Empty node");
+            }
             assert(current_node_ != nullptr);
             return (current_node_->left.get() == nullptr) and
                    (current_node_->right.get() == nullptr);
