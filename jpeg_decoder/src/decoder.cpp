@@ -40,7 +40,6 @@ bool JPGDecoder::IsValidFormat() {
 void JPGDecoder::ParseJPG() {
     while (!is_parsing_done_) {
         ParseNextSection();
-        is_parsing_done_ = reader_.IsEnded();
     }
 }
 
@@ -214,7 +213,7 @@ void JPGDecoder::ParseSOS() {
     for (int i = 0; i < header_size; ++i) {
         reader_.ReadByte();
     }
-    // read and decode real data
+    // Read and decode real data
     FillChannelTables();
 }
 
@@ -321,10 +320,8 @@ SquareMatrixInt JPGDecoder::GetNextChannelTable(int channel_id) {
     int dc_coeff = GetDCCoeff(channel_id);
 
     coeffs.push_back(dc_coeff);
-    //std::cout << "val: " << dc_coeff << "\n";
     while ((coeffs.size() < 64)) {
         auto ac_coeffs = GetACCoeffs(channel_id);
-//        std::cout << "ac coeff: " << ac_coeffs.first << ", " << ac_coeffs.second << "\n";
         if (ac_coeffs.first == -1) {
             break;
         }
@@ -332,13 +329,7 @@ SquareMatrixInt JPGDecoder::GetNextChannelTable(int channel_id) {
             coeffs.push_back(0);
         }
         coeffs.push_back(ac_coeffs.second);
-        //std::cout << "val: " << dc_coeff << "\n";
     }
-    //std::cout << "coeffs: ";
-//    for (const auto& coeff : coeffs) {
-//        std::cout << coeff << " ";
-//    }
-//    std::cout << "\n";
     auto matrix = SquareMatrixInt::CreateFromZigZag(coeffs, 8, 0);
 
     // quantize
@@ -402,21 +393,35 @@ void JPGDecoder::FillChannelTables() {
             FillChannelTablesRound();
         }
         catch (const std::runtime_error&) {
+            std::cout << "RUNTIME ERROR\n";
+            reader_.CleanCache();
             return;
         }
     }
 }
 
-void JPGDecoder::IDCTransform(SquareMatrixInt* matrix) {
-    fftw_complex *in, *out;
-    fftw_plan p;
-    // ...
-    in = (fftw_complex*) fftw_malloc(sizeof() * N);
-    out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
-    p = fftw_plan_dft_r2c_2d(8, 8, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
-    // ...
-    fftw_execute(p);
-    // ...
-    fftw_destroy_plan(p);
-    fftw_free(in); fftw_free(out);
+SquareMatrixDouble JPGDecoder::MakeIDCTransform(const SquareMatrixInt& matrix) {
+    double coeff1 = 0.5 / 8;
+    double coeff2 = std::sqrt(2);
+
+    auto* buffer = new double[64];
+    for (size_t i = 0; i < 8; ++i) {
+        for (size_t j = 0; j < 8; ++j) {
+            buffer[i*8+j] = matrix.at(i, j) * coeff1;
+            buffer[i*8+j] = i == 0 ? buffer[i*8+j] * coeff2 : buffer[i*8+j];
+            buffer[i*8+j] = j == 0 ? buffer[i*8+j] * coeff2 : buffer[i*8+j];
+        }
+    }
+    fftw_plan plan = fftw_plan_r2r_2d(8, 8, buffer, buffer, FFTW_REDFT01, FFTW_REDFT01, 0);
+    fftw_execute(plan);
+    fftw_destroy_plan(plan);
+
+    std::vector<double> resulted_buffer;
+    for (int i = 0; i < 64; ++i) {
+        resulted_buffer.push_back(buffer[i]);
+    }
+    delete[] buffer;
+
+    auto resulted_matrix = SquareMatrixDouble(resulted_buffer, 8);
+    return resulted_matrix;
 }

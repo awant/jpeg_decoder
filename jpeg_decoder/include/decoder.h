@@ -37,6 +37,7 @@ struct DHTDescriptorEqual {
 using HuffmanTreeInt = HuffmanTree<int>;
 using HuffmanMap = std::unordered_map<DHTDescriptor, HuffmanTreeInt, DHTDescriptorHash, DHTDescriptorEqual>;
 using SquareMatrixInt = SquareMatrix<int>;
+using SquareMatrixDouble = SquareMatrix<double>;
 
 struct ChannelDescriptor {
     int horizontal_thinning;
@@ -105,5 +106,5 @@ private:
     void FillChannelTables();
 
     void DeQuantize();
-    void IDCTransform(SquareMatrixInt* matrix);
+    SquareMatrixDouble MakeIDCTransform(const SquareMatrixInt& matrix);
 };

@@ -65,6 +65,11 @@ void ByteStreamReader::Read(char* buffer, size_t size) {
     }
 }
 
+void ByteStreamReader::CleanCache() {
+    cache_size_ = MAX_CACHE_SIZE;
+    cache_ = 0;
+}
+
 bool ByteStreamReader::IsEnded() const {
     return (cache_size_ == MAX_CACHE_SIZE) && !stream_;
 }
