@@ -75,7 +75,7 @@ private:
     uint32_t height_ = 0, width_ = 0;
     std::string comment_;
     HuffmanMap huffman_trees_;
-    std::unordered_map<int, SquareMatrix<int>> dqt_tables_;
+    std::unordered_map<int, SquareMatrixInt> dqt_tables_;
     std::vector<ChannelDescriptor> sof0_descriptors_;
     std::vector<SOSDescriptor> sos_descriptors_;
 
@@ -105,4 +105,5 @@ private:
     void FillChannelTables();
 
     void DeQuantize();
+    void IDCTransform(SquareMatrixInt* matrix);
 };

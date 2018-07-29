@@ -45,7 +45,7 @@ void JPGDecoder::ParseJPG() {
 }
 
 void JPGDecoder::ParseNextSection() {
-    std::cout << "before read word: " << reader_.IsCacheEmpty() << "\n";
+    //std::cout << "before read word: " << reader_.IsCacheEmpty() << "\n";
     auto marker = reader_.ReadWord();
     std::cout << "MARKER: " << marker << "\n";
     switch (marker) {
@@ -136,7 +136,7 @@ void JPGDecoder::ParseDQT() {
     for (size_t i = 0; i < values_count; ++i) {
         values[i] = value_size == 1 ? reader_.ReadByte() : reader_.ReadWord();
     }
-    dqt_tables_.emplace(table_id, SquareMatrix<int>::CreateFromZigZag(values, 8, 0xff));
+    dqt_tables_.emplace(table_id, SquareMatrixInt::CreateFromZigZag(values, 8, 0xff));
 }
 
 void JPGDecoder::ParseSOF0() {
@@ -219,14 +219,24 @@ void JPGDecoder::ParseSOS() {
 }
 
 void JPGDecoder::DeQuantize() {
+    std::cout << "--- DeQuantize ---\n";
     for (auto& table : y_channel_tables_) {
-        Multiply(table, dqt_tables_[0]);
+        const auto& it = dqt_tables_.find(0);
+        table.Multiply(it->second);
+        std::cout << "Y channel\n";
+        table.Dump();
     }
     for (auto& table : cb_channel_tables_) {
-        Multiply(table, dqt_tables_[1]);
+        const auto& it = dqt_tables_.find(1);
+        table.Multiply(it->second);
+        std::cout << "Y channel\n";
+        table.Dump();
     }
     for (auto& table : cr_channel_tables_) {
-        Multiply(table, dqt_tables_[1]);
+        const auto& it = dqt_tables_.find(1);
+        table.Multiply(it->second);
+        std::cout << "Y channel\n";
+        table.Dump();
     }
 }
 
@@ -265,7 +275,7 @@ int JPGDecoder::NextBitsToACDCCoeff(int length) {
 
 
 int JPGDecoder::GetDCCoeff(int channel_id) {
-    std::cout << "--- GetDCCoeff ---\n";
+    //std::cout << "--- GetDCCoeff ---\n";
     int table_id = sos_descriptors_[channel_id].huffman_table_dc_id;
     DHTDescriptor descriptor{table_id, DC};
     const auto& huffman_tree_pair_it = huffman_trees_.find(descriptor);
@@ -285,7 +295,7 @@ int JPGDecoder::GetDCCoeff(int channel_id) {
 // return pair: (number of zeros, coeff value)
 // number of zeros = -1 means all rest values are zeros
 std::pair<int, int> JPGDecoder::GetACCoeffs(int channel_id) {
-    std::cout << "--- GetACCoeffs ---\n";
+    //std::cout << "--- GetACCoeffs ---\n";
     int table_id = sos_descriptors_[channel_id].huffman_table_ac_id;
     DHTDescriptor descriptor{table_id, AC};
     const auto& huffman_tree_pair_it = huffman_trees_.find(descriptor);
@@ -324,14 +334,18 @@ SquareMatrixInt JPGDecoder::GetNextChannelTable(int channel_id) {
         coeffs.push_back(ac_coeffs.second);
         //std::cout << "val: " << dc_coeff << "\n";
     }
-    std::cout << "coeffs: ";
-    for (const auto& coeff : coeffs) {
-        std::cout << coeff << " ";
-    }
-    std::cout << "\n";
+    //std::cout << "coeffs: ";
+//    for (const auto& coeff : coeffs) {
+//        std::cout << coeff << " ";
+//    }
+//    std::cout << "\n";
     auto matrix = SquareMatrixInt::CreateFromZigZag(coeffs, 8, 0);
-    matrix.Dump();
-    std::cout << "cache_size: " << reader_.cache_size_ << "\n";
+
+    // quantize
+    int dqt_table_id = sof0_descriptors_[channel_id].dqt_table_id;
+    const auto& quantize_matrix = dqt_tables_.find(dqt_table_id)->second;
+    matrix.Multiply(quantize_matrix);
+
     return matrix;
 }
 
@@ -339,13 +353,18 @@ void JPGDecoder::FillChannelTablesRound() {
     std::cout << "--- FillChannelTablesRound ---\n";
     // y components
     int y_components_count = 4; // horizontal = 2, vertical = 2
+
     int prev_dc_coeff = 0;
     for (int i = 0; i < y_components_count; ++i) {
         y_channel_tables_.emplace_back(GetNextChannelTable(1));
 
+        auto& new_matrix = y_channel_tables_.back();
+
         // fix dc coeff
-        y_channel_tables_.back().at(0, 0) += prev_dc_coeff;
-        prev_dc_coeff = y_channel_tables_.back().at(0, 0);
+//        if (y_channel_tables_.size() > y_components_count) {
+//            new_matrix.at(0, 0) += y_channel_tables_[y_channel_tables_.size()-y_components_count].at(0, 0);
+//        }
+        new_matrix.Dump();
     }
     // cb components
     int cb_components_count = 1;
@@ -353,8 +372,13 @@ void JPGDecoder::FillChannelTablesRound() {
     for (int i = 0; i < cb_components_count; ++i) {
         cb_channel_tables_.emplace_back(GetNextChannelTable(2));
 
-        cb_channel_tables_.back().at(0, 0) += prev_dc_coeff;
-        prev_dc_coeff = cb_channel_tables_.back().at(0, 0);
+        auto& new_matrix = cb_channel_tables_.back();
+
+        // fix dc coeff
+//        if (cb_channel_tables_.size() > y_components_count) {
+//            new_matrix.at(0, 0) += cb_channel_tables_[cb_channel_tables_.size()-cb_components_count].at(0, 0);
+//        }
+        new_matrix.Dump();
     }
     // cr components
     int cr_components_count = 1;
@@ -362,8 +386,13 @@ void JPGDecoder::FillChannelTablesRound() {
     for (int i = 0; i < cr_components_count; ++i) {
         cr_channel_tables_.emplace_back(GetNextChannelTable(3));
 
-        cr_channel_tables_.back().at(0, 0) += prev_dc_coeff;
-        prev_dc_coeff = cr_channel_tables_.back().at(0, 0);
+        auto& new_matrix = cr_channel_tables_.back();
+
+        // fix dc coeff
+//        if (cr_channel_tables_.size() > cr_components_count) {
+//            new_matrix.at(0, 0) += cr_channel_tables_[cr_channel_tables_.size() - cr_components_count].at(0, 0);
+//        }
+        new_matrix.Dump();
     }
 }
 
@@ -376,4 +405,18 @@ void JPGDecoder::FillChannelTables() {
             return;
         }
     }
+}
+
+void JPGDecoder::IDCTransform(SquareMatrixInt* matrix) {
+    fftw_complex *in, *out;
+    fftw_plan p;
+    // ...
+    in = (fftw_complex*) fftw_malloc(sizeof() * N);
+    out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
+    p = fftw_plan_dft_r2c_2d(8, 8, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+    // ...
+    fftw_execute(p);
+    // ...
+    fftw_destroy_plan(p);
+    fftw_free(in); fftw_free(out);
 }
