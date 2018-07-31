@@ -49,27 +49,49 @@ Image JPGDecoder::Decode() {
     std::cout << ": " << cr_channel_tables2_.size() << "\n";
     std::cout << ": " << height_ << "x" << width_ << "\n";
 
+    std::cout << "--- fill y channel --- \n";
+    std::vector<std::vector<int>> y_channel(32, std::vector<int>(32, 0));
+    // TODO: fix
+    for (size_t i = 0; i < y_channel_tables2_.size(); ++i) {
+        int block_row = i / 4 / 4 * 2 + (i % 4) / 2;
+        int block_col = (i / 4 % 4) * 2 + (i % 2);
+
+        for (int y = block_row * 8; y < (block_row + 1) * 8; ++y) {
+            for (int x = block_col * 8; x < (block_col + 1) * 8; ++x) {
+                y_channel[y][x] = y_channel_tables2_[i].at(y - block_row * 8, x - block_col * 8);
+            }
+        }
+    }
+
+    std::cout << "--- fill others channels --- \n";
+    std::vector<std::vector<int>> cb_channel(16, std::vector<int>(16, 0));
+    std::vector<std::vector<int>> cr_channel(16, std::vector<int>(16, 0));
+    for (size_t i = 0; i < cb_channel_tables2_.size(); ++i) {
+        int block_row = i / 2;
+        int block_col = i % 2;
+        std::cout << block_row << ", " << block_col << "\n";
+
+        for (int y = block_row * 8; y < (block_row + 1) * 8; ++y) {
+            for (int x = block_col * 8; x < (block_col + 1) * 8; ++x) {
+                cb_channel[y][x] = cb_channel_tables2_[i].at(y - block_row * 8, x - block_col * 8);
+                cr_channel[y][x] = cr_channel_tables2_[i].at(y - block_row * 8, x - block_col * 8);
+            }
+        }
+    }
+
+    std::cout << "--- create image ---\n";
+
     auto image = Image(width_, height_);
     image.SetComment(comment_);
 
-    std::vector<std::vector<int>> y_channel(32, std::vector<int>(32, 0));
-    std::vector<std::vector<int>> cb_channel(32, std::vector<int>(32, 0));
-    std::vector<std::vector<int>> cr_channel(32, std::vector<int>(32, 0));
-
     for (int y = 0; y < 32; ++y) {
         for (int x = 0; x < 32; ++x) {
-            int block_row = y / 8;
-            int block_col = x / 8;
-            int block_idx = block_row * 4 + block_col;
-
-            y_channel[y][x] = y_channel_tables_[block_idx].at(y-8*block_row, x-8*block_col);
-            cb_channel[y][x] = cb_channel[...].at(...);
-            cr_channel[y][x] = cr_channel[...].at(...);
-
-            auto pixel = YCbCrToRGB(y_channel[y][x], cb_channel[y][x], cr_channel[y][x]);
-            image.SetPixel(block_row+y, block_col+x, pixel);
+            auto pixel = YCbCrToRGB(y_channel[y][x], cb_channel[y/2][x/2], cr_channel[y/2][x/2]);
+            image.SetPixel(y, x, pixel);
         }
     }
+
+
     return image;
 }
 
