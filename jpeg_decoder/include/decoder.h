@@ -50,24 +50,12 @@ struct SOSDescriptor {
     int huffman_table_ac_id;
 };
 
-/*
-
-enum Channel {
-    Y,
-    Cb,
-    Cr
-};
-
-*/
-
 
 class JPGDecoder {
 public:
     explicit JPGDecoder(std::istream &s);
 
     Image Decode();
-
-    void Dump(std::ostream &os);
 
 private:
     bool is_parsing_done_ = false; // set when parsing finished
@@ -83,6 +71,10 @@ private:
     std::vector<SquareMatrixInt> y_channel_tables_;
     std::vector<SquareMatrixInt> cb_channel_tables_;
     std::vector<SquareMatrixInt> cr_channel_tables_;
+
+    std::vector<SquareMatrixDouble> y_channel_tables2_;
+    std::vector<SquareMatrixDouble> cb_channel_tables2_;
+    std::vector<SquareMatrixDouble> cr_channel_tables2_;
 
     bool IsValidFormat();
 
@@ -105,6 +97,6 @@ private:
     void FillChannelTablesRound();
     void FillChannelTables();
 
-    void DeQuantize();
     SquareMatrixDouble MakeIDCTransform(const SquareMatrixInt& matrix);
+    RGB YCbCrToRGB(double Y, double Cb, double Cr);
 };
