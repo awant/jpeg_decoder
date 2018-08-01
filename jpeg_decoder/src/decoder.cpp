@@ -53,8 +53,9 @@ Image JPGDecoder::Decode() {
     std::vector<std::vector<int>> y_channel(32, std::vector<int>(32, 0));
     // TODO: fix
     for (size_t i = 0; i < y_channel_tables2_.size(); ++i) {
-        int block_row = i / 4 / 4 * 2 + (i % 4) / 2;
-        int block_col = (i / 4 % 4) * 2 + (i % 2);
+
+        int block_row = i / 8 * 2 + (i % 4) / 2;
+        int block_col = i / 4 % 2 * 2 + i % 4 % 2;
 
         for (int y = block_row * 8; y < (block_row + 1) * 8; ++y) {
             for (int x = block_col * 8; x < (block_col + 1) * 8; ++x) {
@@ -69,7 +70,7 @@ Image JPGDecoder::Decode() {
     for (size_t i = 0; i < cb_channel_tables2_.size(); ++i) {
         int block_row = i / 2;
         int block_col = i % 2;
-        std::cout << block_row << ", " << block_col << "\n";
+//        std::cout << block_row << ", " << block_col << "\n";
 
         for (int y = block_row * 8; y < (block_row + 1) * 8; ++y) {
             for (int x = block_col * 8; x < (block_col + 1) * 8; ++x) {
@@ -90,7 +91,6 @@ Image JPGDecoder::Decode() {
             image.SetPixel(y, x, pixel);
         }
     }
-
 
     return image;
 }
