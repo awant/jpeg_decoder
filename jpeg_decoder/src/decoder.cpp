@@ -25,6 +25,10 @@ RGB JPGDecoder::YCbCrToRGB(double Y, double Cb, double Cr) {
     pixel.r = static_cast<int>(Y + 1.402 * Cr + 128);
     pixel.g = static_cast<int>(Y - 0.34414 * Cb - 0.71414 * Cr + 128);
     pixel.b = static_cast<int>(Y + 1.772 * Cb + 128);
+
+    pixel.r = std::min(std::max(0, pixel.r), 255);
+    pixel.g = std::min(std::max(0, pixel.g), 255);
+    pixel.b = std::min(std::max(0, pixel.b), 255);
     return pixel;
 }
 
@@ -43,6 +47,14 @@ Image JPGDecoder::Decode() {
     for (const auto& table: cr_channel_tables_) {
         cr_channel_tables2_.emplace_back(MakeIDCTransform(table));
     }
+//    std::cout << "y_channel_tables_.front\n";
+//    y_channel_tables_.front().Dump();
+//    std::cout << "y_channel_tables2_.front\n";
+//    y_channel_tables2_.front().Dump();
+//    std::cout << "cb_channel_tables2_.front\n";
+//    cb_channel_tables2_.front().Dump();
+//    std::cout << "cr_channel_tables2_.front\n";
+//    cr_channel_tables2_.front().Dump();
 
     std::cout << ": " << y_channel_tables2_.size() << "\n";
     std::cout << ": " << cb_channel_tables2_.size() << "\n";
@@ -53,7 +65,6 @@ Image JPGDecoder::Decode() {
     std::vector<std::vector<int>> y_channel(32, std::vector<int>(32, 0));
     // TODO: fix
     for (size_t i = 0; i < y_channel_tables2_.size(); ++i) {
-
         int block_row = i / 8 * 2 + (i % 4) / 2;
         int block_col = i / 4 % 2 * 2 + i % 4 % 2;
 
@@ -70,7 +81,6 @@ Image JPGDecoder::Decode() {
     for (size_t i = 0; i < cb_channel_tables2_.size(); ++i) {
         int block_row = i / 2;
         int block_col = i % 2;
-//        std::cout << block_row << ", " << block_col << "\n";
 
         for (int y = block_row * 8; y < (block_row + 1) * 8; ++y) {
             for (int x = block_col * 8; x < (block_col + 1) * 8; ++x) {
@@ -287,9 +297,13 @@ void JPGDecoder::FillChannelTables() {
         catch (const std::runtime_error&) {
             // Clean current byte and check if next 2 bytes is end marker
             reader_.CleanCache();
-            return;
+            break;
         }
     }
+    std::cout << "last tables\n";
+    y_channel_tables_.back().Dump();
+    cb_channel_tables_.back().Dump();
+    cr_channel_tables_.back().Dump();
 }
 
 int JPGDecoder::GetNextLeafValue(HuffmanTreeInt::Iterator& huffman_tree_it) {
@@ -443,22 +457,27 @@ SquareMatrixDouble JPGDecoder::MakeIDCTransform(const SquareMatrixInt& matrix) {
     double coeff2 = std::sqrt(2);
 
     auto* buffer = new double[64];
+    auto* buffer2 = new double[64];
     for (size_t i = 0; i < 8; ++i) {
         for (size_t j = 0; j < 8; ++j) {
-            buffer[i*8+j] = matrix.at(i, j) * coeff1;
-            buffer[i*8+j] = i == 0 ? buffer[i*8+j] * coeff2 : buffer[i*8+j];
-            buffer[i*8+j] = j == 0 ? buffer[i*8+j] * coeff2 : buffer[i*8+j];
+            buffer[i*8+j] = coeff1 * matrix.at(i, j);
+            buffer[i*8+j] = i == 0 ? coeff2 * buffer[i*8+j] : buffer[i*8+j];
+            buffer[i*8+j] = j == 0 ? coeff2 * buffer[i*8+j] : buffer[i*8+j];
         }
     }
-    fftw_plan plan = fftw_plan_r2r_2d(8, 8, buffer, buffer, FFTW_REDFT01, FFTW_REDFT01, 0);
+    fftw_plan plan = fftw_plan_r2r_2d(8, 8, buffer, buffer2, FFTW_REDFT01, FFTW_REDFT01, 0);
     fftw_execute(plan);
     fftw_destroy_plan(plan);
 
     std::vector<double> resulted_buffer(64);
     for (int i = 0; i < 64; ++i) {
-        resulted_buffer[i] = buffer[i];
+        resulted_buffer[i] = buffer2[i];
+//        std::cout << buffer[i] << " ";
     }
+//    std::cout << "\n";
     delete[] buffer;
+    delete[] buffer2;
+//    throw std::runtime_error("qwe");
 
     auto resulted_matrix = SquareMatrixDouble(resulted_buffer, 8);
     return resulted_matrix;
