@@ -37,14 +37,14 @@ namespace {
         if (dir->x == 1 and dir->y == -1) {
             if (cur_place.y == 0) {
                 dir->y = 0;
-            } else if (cur_place.x == (size - 1)) {
+            } else if (cur_place.x == static_cast<int>(size - 1)) {
                 dir->x = 0;
                 dir->y = 1;
             }
             return;
         }
         if (dir->x == -1 and dir->y == 1) {
-            if (cur_place.y == (size - 1)) {
+            if (cur_place.y == static_cast<int>(size - 1)) {
                 dir->x = 1;
                 dir->y = 0;
             } else if (cur_place.x == 0) {
@@ -65,7 +65,7 @@ public:
     Matrix(size_t size, const T& default_value)
             : Matrix(size, size, default_value) {}
 
-    Matrix(std::vector<T> array, size_t height, size_t width)
+    Matrix(size_t height, size_t width, const std::vector<T>& array)
             : Matrix(height, width, T()) {
         if (array.size() != height * width) {
             throw std::runtime_error("Array size doesn't correspond to height, width params");
@@ -129,21 +129,12 @@ public:
         return *this;
     }
 
-    void Fill(T* array) const {
-        size_t idx = 0;
-        for (size_t i = 0; i < height_; ++i) {
-            for (size_t j = 0; j < width_; ++j) {
-                array[idx++] = buffer_[i][j];
-            }
-        }
-    }
-
-    bool operator==(const Matrix<T>& other) const {
-        if ((width_ != other.width_) || (height_ != other.height_)) {
+    bool operator==(const Matrix<T>& rhs) const {
+        if ((width_ != rhs.GetWidth()) || (height_ != rhs.GetHeight())) {
             return false;
         }
         for (int i = 0; i < buffer_.size(); ++i) {
-            if (buffer_[i] != other.buffer_[i]) {
+            if (buffer_[i] != rhs.buffer_[i]) {
                 return false;
             }
         }
@@ -170,7 +161,7 @@ protected:
 template <class T>
 class SquareMatrix: public Matrix<T> {
 public:
-    static SquareMatrix<T> CreateFromZigZag(const std::vector<int>& values, size_t size,
+    static SquareMatrix<T> CreateFromZigZag(size_t size, const std::vector<int>& values,
                                             T default_value) {
         SquareMatrix<T> result(size, default_value);
         result.FillZigZag(values);
@@ -180,8 +171,8 @@ public:
     SquareMatrix(size_t size, const T& default_value)
             : Matrix<T>(size, default_value) {}
 
-    SquareMatrix(std::vector<T> array, size_t size)
-            : Matrix<T>(array, size, size) {}
+    SquareMatrix(size_t size, const std::vector<T>& array)
+            : Matrix<T>(size, size, array) {}
 
     size_t GetSize() const {
         return this->width_;

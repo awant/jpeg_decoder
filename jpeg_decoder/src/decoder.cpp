@@ -19,6 +19,9 @@ Image Decode(const std::string& filename) {
 
 JPGDecoder::JPGDecoder(std::istream& s): reader_(s) {}
 
+float clip(float n, float lower, float upper) {
+    return std::max(lower, std::min(n, upper));
+}
 
 RGB JPGDecoder::YCbCrToRGB(double Y, double Cb, double Cr) {
     RGB pixel;
@@ -26,9 +29,10 @@ RGB JPGDecoder::YCbCrToRGB(double Y, double Cb, double Cr) {
     pixel.g = static_cast<int>(Y - 0.34414 * Cb - 0.71414 * Cr + 128);
     pixel.b = static_cast<int>(Y + 1.772 * Cb + 128);
 
-    pixel.r = std::min(std::max(0, pixel.r), 255);
-    pixel.g = std::min(std::max(0, pixel.g), 255);
-    pixel.b = std::min(std::max(0, pixel.b), 255);
+    pixel.r = std::round(clip(pixel.r, 0.0, 255.0));
+    pixel.g = std::round(clip(pixel.g, 0.0, 255.0));
+    pixel.b = std::round(clip(pixel.b, 0.0, 255.0));
+
     return pixel;
 }
 
@@ -229,7 +233,6 @@ void JPGDecoder::ParseSOF0() {
     int max_horizontal_thinning = 0, max_vertical_thinning = 0;
     sof0_descriptors_.resize(4);
 
-    // 1 22 0 2 11 1 3 11 1 ff
     for (size_t i = 0; i < components_count; ++i) {
         int id = reader_.ReadByte();
         std::cout << "ch id: " << id;
@@ -419,7 +422,7 @@ void JPGDecoder::FillChannelTablesRound() {
         new_matrix.Dump();
 
         // Fix DC coeff
-        if (i > 0) {
+        if (y_channel_tables_.size() > 1) {
             new_matrix.at(0, 0) += y_channel_tables_[y_channel_tables_.size()-2].at(0, 0);
         }
     }
@@ -432,7 +435,7 @@ void JPGDecoder::FillChannelTablesRound() {
         new_matrix.Dump();
 
         // Fix DC coeff
-        if (i > 0) {
+        if (cb_channel_tables_.size() > 1) {
             new_matrix.at(0, 0) += cb_channel_tables_[cb_channel_tables_.size()-2].at(0, 0);
         }
     }
@@ -445,7 +448,7 @@ void JPGDecoder::FillChannelTablesRound() {
         new_matrix.Dump();
 
         // Fix DC coeffs
-        if (i > 0) {
+        if (cr_channel_tables_.size() > 1) {
             new_matrix.at(0, 0) += cr_channel_tables_[cr_channel_tables_.size()-2].at(0, 0);
         }
     }

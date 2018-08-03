@@ -1,16 +1,17 @@
 #include <catch.hpp>
 #include <iostream>
 #include <strstream>
+#include "test_commons.h"
 
 #include "decoder.h"
 
 
 TEST_CASE("Bytes stream reading", "[ByteStreamReader]") {
     {
-        uint8_t a1 = 0xff, a2 = 0x3f, a3 = 0x56, a4 = 0x12;
-        uint16_t word = static_cast<uint16_t>(0x56) << 8 | a4;
+        uint8_t aff = 0xff, a3f = 0x3f, a56 = 0x56, a12 = 0x12;
+        uint16_t word = static_cast<uint16_t>(0x56) << 8 | a12;
         std::strstream ss;
-        ss << a1 << a2 << a3 << a4;
+        ss << aff << a3f << a56 << a12;
 
         ByteStreamReader reader(ss);
         REQUIRE(reader.ReadByte() == 0xff);
@@ -24,21 +25,22 @@ TEST_CASE("Bytes stream reading", "[ByteStreamReader]") {
 }
 
 TEST_CASE("Matrix operations", "[Matrix]") {
-    const std::vector<int> values = {0,2,3,5,9,2,7,3,4};
+    const std::vector<int> values = {0, 2, 3, 5, 9, 2, 7, 3, 4};
     size_t size = 8;
-    auto dht_table = SquareMatrix<int>::CreateFromZigZag(values, size, 0xff);
+    auto dht_table = SquareMatrix<int>::CreateFromZigZag(size, values, 0xff);
     std::vector<int> array{0x0, 0x2, 0x2, 0x7, 0xff, 0xff, 0xff, 0xff,
                            0x3, 0x9, 0x3, 0xff, 0xff, 0xff, 0xff, 0xff,
                            0x5, 0x4, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-    for (int i = 0; i < (64-24); ++i) {
-        array.push_back(0xff);
-    }
-    auto true_dht_table = SquareMatrix<int>(array, 8);
+    array.resize(size*size, 0xff);
+
+    auto true_dht_table = SquareMatrix<int>(size, array);
 
     REQUIRE(dht_table == true_dht_table);
+
+    auto matrix1 = Matrix<double>(2, 3);
 }
 
-TEST_CASE("Huffman tree construction", "[HuffmanTree]") {
+//TEST_CASE("Huffman tree construction", "[HuffmanTree]") {
 //    std::vector<int> counters(16, 0);
 //    counters[0] = 1;
 //    counters[2] = 2;
@@ -53,7 +55,7 @@ TEST_CASE("Huffman tree construction", "[HuffmanTree]") {
 //    int val = huffman_tree.Decode(sequence, &is_decoded);
 //    REQUIRE(is_decoded);
 //    REQUIRE(val == 0x12);
-}
+//}
 
 //TEST_CASE("Check fft transform", "[FFT]") {
 //    {
@@ -97,4 +99,8 @@ TEST_CASE("Huffman tree construction", "[HuffmanTree]") {
 TEST_CASE("Full decoder process", "[Decoder]") {
     const std::string filename = "/Users/romanmarakulin/C++/shad-cpp/jpeg-decoder/tests/small.jpg";
     Image img = Decode(filename);
+
+    auto dot_pos = filename.find('.');
+    std::string png_filename(filename.substr(0, dot_pos) + ".png");
+    WritePng(png_filename, img);
 }
