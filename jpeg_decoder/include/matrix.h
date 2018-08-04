@@ -4,7 +4,7 @@
 #include <ostream>
 #include <cmath>
 #include <fftw3.h>
-
+#include <iostream>
 
 namespace {
     struct Point {
@@ -57,6 +57,7 @@ namespace {
 
 template <class T>
 class Matrix {
+    const double epsilon = 0.001;
 public:
     Matrix(size_t height, size_t width, const T& default_value)
             : height_(height), width_(width),
@@ -74,6 +75,15 @@ public:
         for (size_t i = 0; i < height_; ++i) {
             for (size_t j = 0; j < width_; ++j) {
                 buffer_[i][j] = array[idx++];
+            }
+        }
+    }
+
+    template <class T2>
+    explicit Matrix(const Matrix<T2>& matrix): Matrix(matrix.GetHeight(), matrix.GetWidth(), T()) {
+        for (int y = 0; y < height_; ++y) {
+            for (int x = 0; x < width_; ++x) {
+                buffer_[y][x] = matrix.at(y, x);
             }
         }
     }
@@ -133,15 +143,17 @@ public:
         if ((width_ != rhs.GetWidth()) || (height_ != rhs.GetHeight())) {
             return false;
         }
-        for (int i = 0; i < buffer_.size(); ++i) {
-            if (buffer_[i] != rhs.buffer_[i]) {
-                return false;
+        for (int i = 0; i < height_; ++i) {
+            for (int j = 0; j < width_; j++) {
+                if (abs(buffer_[i][j] - rhs.buffer_[i][j]) > epsilon) {
+                    return false;
+                }
             }
         }
         return true;
     }
 
-    void Dump(std::ostream& os = std::cout) {
+    void Dump(std::ostream& os = std::cout) const {
         os << "size: " << height_ << "x" << width_ << "\n";
         os << std::dec;
         for (size_t i = 0; i < height_; ++i) {
@@ -174,6 +186,10 @@ public:
     SquareMatrix(size_t size, const std::vector<T>& array)
             : Matrix<T>(size, size, array) {}
 
+    template<class T2>
+    explicit SquareMatrix(const SquareMatrix<T2>& rhs)
+            : Matrix<T>(rhs) {}
+
     size_t GetSize() const {
         return this->width_;
     }
@@ -192,4 +208,55 @@ public:
         }
         return *this;
     }
+};
+
+
+template <class T>
+class MatrixTransformer {
+public:
+    static const int TransformSize = 8;
+    const double coeff1 = 0.5 / TransformSize;
+    const double coeff2 = std::sqrt(2);
+
+    MatrixTransformer() {
+        plan_ = fftw_plan_r2r_2d(TransformSize, TransformSize, input_buffer_,
+                output_buffer_, FFTW_REDFT01, FFTW_REDFT01, 0);
+    };
+
+    ~MatrixTransformer() {
+        fftw_destroy_plan(plan_);
+    }
+
+    void MakeIDCTransform(SquareMatrix<T>* matrix) {
+        if (matrix->GetSize() != TransformSize) {
+            throw std::runtime_error("Support only 8x8 matrices");
+        }
+
+        // fill input buffer
+        for (size_t i = 0; i < TransformSize; ++i) {
+            for (size_t j = 0; j < TransformSize; ++j) {
+                input_buffer_[i*TransformSize+j] = coeff1 * matrix->at(i, j);
+                if (!i) {
+                    input_buffer_[i*TransformSize+j] *= coeff2;
+                }
+                if (!j) {
+                    input_buffer_[i*TransformSize+j] *= coeff2;
+                }
+            }
+        }
+
+        fftw_execute(plan_);
+
+        // fill matrix from output buffer
+        for (size_t i = 0; i < TransformSize; ++i) {
+            for (size_t j = 0; j < TransformSize; ++j) {
+                matrix->at(i, j) = output_buffer_[i*TransformSize+j];
+            }
+        }
+    }
+
+private:
+    double input_buffer_[TransformSize*TransformSize];
+    double output_buffer_[TransformSize*TransformSize];
+    fftw_plan plan_;
 };
