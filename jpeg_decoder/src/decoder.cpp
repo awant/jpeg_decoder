@@ -3,14 +3,12 @@
 
 #include "decoder.h"
 
-
 Image Decode(const std::string& filename) {
 
     std::ifstream stream(filename, std::ios_base::binary);
     if (!stream.good()) {
         throw std::runtime_error("Can't open file: " + filename);
     }
-
     JPGDecoder decoder(stream);
     Image img = decoder.Decode();
     stream.close();
@@ -19,20 +17,15 @@ Image Decode(const std::string& filename) {
 
 JPGDecoder::JPGDecoder(std::istream& s): reader_(s) {}
 
-float clip(float n, float lower, float upper) {
-    return std::max(lower, std::min(n, upper));
-}
-
 RGB JPGDecoder::YCbCrToRGB(double Y, double Cb, double Cr) {
     RGB pixel;
     pixel.r = static_cast<int>(Y + 1.402 * Cr + 128);
     pixel.g = static_cast<int>(Y - 0.34414 * Cb - 0.71414 * Cr + 128);
     pixel.b = static_cast<int>(Y + 1.772 * Cb + 128);
 
-    pixel.r = std::round(clip(pixel.r, 0.0, 255.0));
-    pixel.g = std::round(clip(pixel.g, 0.0, 255.0));
-    pixel.b = std::round(clip(pixel.b, 0.0, 255.0));
-
+    pixel.r = std::max(0, std::min(pixel.r, 255));
+    pixel.r = std::max(0, std::min(pixel.g, 255));
+    pixel.r = std::max(0, std::min(pixel.b, 255));
     return pixel;
 }
 

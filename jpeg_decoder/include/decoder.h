@@ -15,11 +15,10 @@
 #include "huffman_tree.h"
 #include "matrix.h"
 
-
-
 // https://habr.com/post/102521/
 // https://gitlab.com/slon/shad-cpp/tree/master/jpeg-decoder
-Image Decode(const std::string &filename);
+
+Image Decode(const std::string& filename);
 
 
 struct DHTDescriptorHash {
@@ -54,17 +53,14 @@ struct SOSDescriptor {
 class JPGDecoder {
 public:
     explicit JPGDecoder(std::istream &s);
-
     Image Decode();
 
 private:
-    bool is_parsing_done_ = false; // set when parsing finished
-    ByteStreamReader reader_;
+    bool is_parsing_done_ = false; // is set when parsing finished
+    ByteStreamReader reader_;  // read from stream bytes, words, bits
 
     MatrixTransformer<double> matrix_transformer_; // IDCT transformation
 
-    uint32_t height_ = 0, width_ = 0;
-    std::string comment_;
     HuffmanMap huffman_trees_;
     std::unordered_map<int, SquareMatrixInt> dqt_tables_;
     std::vector<ChannelDescriptor> sof0_descriptors_;
@@ -77,6 +73,11 @@ private:
     std::vector<SquareMatrixDouble> y_channel_tables2_;
     std::vector<SquareMatrixDouble> cb_channel_tables2_;
     std::vector<SquareMatrixDouble> cr_channel_tables2_;
+
+    // image info
+    uint32_t height_ = 0, width_ = 0;
+    std::string comment_;
+
 
     bool IsValidFormat();
 
