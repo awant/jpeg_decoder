@@ -211,7 +211,7 @@ void JPGDecoder::ParseDQT() {
     for (size_t i = 0; i < values_count; ++i) {
         values[i] = value_size == 1 ? reader_.ReadByte() : reader_.ReadWord();
     }
-    dqt_tables_.emplace(table_id, SquareMatrixInt::CreateFromZigZag(values, 8, 0xff));
+    dqt_tables_.emplace(table_id, SquareMatrixInt::CreateFromZigZag(8, values, 0xff));
 }
 
 void JPGDecoder::ParseSOF0() {
@@ -352,7 +352,7 @@ int JPGDecoder::GetDCCoeff(int channel_id) {
     auto it = huffman_tree_pair_it->second.Begin();
 
     int value = GetNextLeafValue(it);
-    if (value == 0) {
+    if (!value) {
         return value;
     }
     // then value is length of coeff in bits
@@ -400,7 +400,7 @@ SquareMatrixInt JPGDecoder::GetNextChannelTable(int channel_id) {
         }
         coeffs.push_back(ac_coeffs.second);
     }
-    auto matrix = SquareMatrixInt::CreateFromZigZag(coeffs, 8, 0);
+    auto matrix = SquareMatrixInt::CreateFromZigZag(8, coeffs, 0);
 
     // Quantize - multiplying
     int dqt_table_id = sof0_descriptors_[channel_id].dqt_table_id;
@@ -456,32 +456,9 @@ void JPGDecoder::FillChannelTablesRound() {
 
 SquareMatrixDouble JPGDecoder::MakeIDCTransform(const SquareMatrixInt& matrix) {
     std::cout << "--- MakeIDCTransform ---\n";
-    double coeff1 = 0.5 / 8;
-    double coeff2 = std::sqrt(2);
 
-    auto* buffer = new double[64];
-    auto* buffer2 = new double[64];
-    for (size_t i = 0; i < 8; ++i) {
-        for (size_t j = 0; j < 8; ++j) {
-            buffer[i*8+j] = coeff1 * matrix.at(i, j);
-            buffer[i*8+j] = i == 0 ? coeff2 * buffer[i*8+j] : buffer[i*8+j];
-            buffer[i*8+j] = j == 0 ? coeff2 * buffer[i*8+j] : buffer[i*8+j];
-        }
-    }
-    fftw_plan plan = fftw_plan_r2r_2d(8, 8, buffer, buffer2, FFTW_REDFT01, FFTW_REDFT01, 0);
-    fftw_execute(plan);
-    fftw_destroy_plan(plan);
+    SquareMatrixDouble result_matrix(matrix);
+    matrix_transformer_.MakeIDCTransform(&result_matrix);
 
-    std::vector<double> resulted_buffer(64);
-    for (int i = 0; i < 64; ++i) {
-        resulted_buffer[i] = buffer2[i];
-//        std::cout << buffer[i] << " ";
-    }
-//    std::cout << "\n";
-    delete[] buffer;
-    delete[] buffer2;
-//    throw std::runtime_error("qwe");
-
-    auto resulted_matrix = SquareMatrixDouble(resulted_buffer, 8);
-    return resulted_matrix;
+    return result_matrix;
 }

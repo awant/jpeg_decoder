@@ -61,6 +61,8 @@ private:
     bool is_parsing_done_ = false; // set when parsing finished
     ByteStreamReader reader_;
 
+    MatrixTransformer<double> matrix_transformer_; // IDCT transformation
+
     uint32_t height_ = 0, width_ = 0;
     std::string comment_;
     HuffmanMap huffman_trees_;

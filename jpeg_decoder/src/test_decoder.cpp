@@ -2,7 +2,6 @@
 #include <iostream>
 #include <strstream>
 #include "test_commons.h"
-
 #include "decoder.h"
 
 
@@ -37,64 +36,86 @@ TEST_CASE("Matrix operations", "[Matrix]") {
 
     REQUIRE(dht_table == true_dht_table);
 
-    auto matrix1 = Matrix<double>(2, 3);
+    auto matrix1 = Matrix<double>(2, 3, {
+        1.2, 2.5, 3.7,
+        4.8, 5.3, 6.4
+    });
+    auto matrix2_sum = Matrix<double>(2, 3, {
+        0.1, 0.3, 1.2,
+        9.1, 5.9, 4.1
+    });
+    auto matrix12_sum = Matrix<double>(2, 3, {
+        1.3, 2.8, 4.9,
+        13.9, 11.2, 10.5
+    });
+    matrix1.Add(matrix2_sum);
+    REQUIRE(matrix1 == matrix12_sum);
+
+    auto matrix2_mul = Matrix<double>(2, 3, {
+            2.0, 1.0, 4.0,
+            1.0, 0.5, 2
+    });
+    auto matrix12_mul = Matrix<double>(2, 3, {
+            2.6, 2.8, 19.6,
+            13.9, 5.6, 21.0
+    });
+    matrix1.Multiply(matrix2_mul);
+    REQUIRE(matrix1 == matrix12_mul);
+
+    double coeff = 0.5;
+    matrix1.Dot(coeff);
+    auto matrix12_dot = Matrix<double>(2, 3, {
+            1.3, 1.4, 9.8,
+            6.95, 2.8, 10.5
+    });
+    REQUIRE(matrix1 == matrix12_dot);
 }
 
-//TEST_CASE("Huffman tree construction", "[HuffmanTree]") {
-//    std::vector<int> counters(16, 0);
-//    counters[0] = 1;
-//    counters[2] = 2;
-//    counters[3] = 3;
-//    counters[4] = 1;
-//    std::vector<int> elems = {0x01, 0x00, 0x12, 0x02, 0x11, 0x31, 0x21};
-//
-//    HuffmanTree<int> huffman_tree;
-//
-//    std::vector<char> sequence = {1,0,1};
-//    bool is_decoded = false;
-//    int val = huffman_tree.Decode(sequence, &is_decoded);
-//    REQUIRE(is_decoded);
-//    REQUIRE(val == 0x12);
-//}
+TEST_CASE("Huffman tree construction", "[HuffmanTree]") {
+    std::vector<int> codes_counters{1, 1};
+    codes_counters.resize(16);
+    std::vector<int> values = {0x03, 0x02};
 
-//TEST_CASE("Check fft transform", "[FFT]") {
-//    {
-//        fftw_plan plan;
-//        int n0 = 2, n1 = 2;
-//
-//        auto* in = new double[4];
-//        auto* out = new double[4];
-//
-//        in[0] = 1;
-//        in[1] = 2;
-//        in[2] = 3;
-//        in[3] = 4;
-//
-//        plan = fftw_plan_r2r_2d(n0, n1, in, out, FFTW_REDFT01, FFTW_REDFT01, FFTW_ESTIMATE);
-//        fftw_execute(plan);
-//        fftw_destroy_plan(plan);
-//
-//        std::cout << "out: ";
-//        for (int i = 0; i < 4; ++i) {
-//            std::cout << out[i] << " ";
-//        }
-//        std::cout << "\n";
-//        delete[] in;
-//        delete[] out;
-//    }
-//
-//    auto* in = new int[4];
-//    in[0] = 1;
-//    in[1] = 2;
-//    in[2] = 3;
-//    in[3] = 4;
-//
-//    Matrix<int> matrix(in, 2, 2);
-//    auto result = IDCT_JPG(matrix);
-//    result.Dump();
-//
-//    delete[] in;
-//}
+    HuffmanTree<int> huffman_tree(codes_counters, values);
+
+    std::vector<char> sequence = {1, 0};
+    auto sequence_it = sequence.begin();
+    auto huffman_tree_it = huffman_tree.Begin();
+
+    int bit = 0;
+    while (!huffman_tree_it.Last()) {
+        bit = *sequence_it;
+        if (bit == 0) {
+            huffman_tree_it.LeftStep();
+        } else if (bit == 1) {
+            huffman_tree_it.RightStep();
+        } else {
+            REQUIRE(false);
+        }
+        if (sequence_it != sequence.end()) {
+            ++sequence_it;
+        }
+    }
+    int value = *huffman_tree_it;
+    REQUIRE(value == 0x02);
+}
+
+TEST_CASE("FFT Transformation", "[FFT]") {
+    MatrixTransformer<double> matrix_transformer;
+
+    std::vector<double> values{
+        2.4, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0
+    };
+    values.resize(8*8);
+    SquareMatrixDouble matrix(8, values);
+
+    SquareMatrixDouble idc_matrix(8, 0.3);
+
+    matrix_transformer.MakeIDCTransform(&matrix);
+
+    REQUIRE(matrix == idc_matrix);
+}
 
 TEST_CASE("Full decoder process", "[Decoder]") {
     const std::string filename = "/Users/romanmarakulin/C++/shad-cpp/jpeg-decoder/tests/small.jpg";

@@ -37,12 +37,10 @@ public:
         }
 
         bool Last() {
-            if (!current_node_) {
+            if (current_node_ == nullptr) {
                 throw std::runtime_error("Empty node");
             }
-            assert(current_node_ != nullptr);
-            return (current_node_->left.get() == nullptr) and
-                   (current_node_->right.get() == nullptr);
+            return (current_node_->left.get() == nullptr) and (current_node_->right.get() == nullptr);
         }
 
         T& operator*() {
@@ -62,15 +60,13 @@ public:
     HuffmanTree(const std::vector<int>& codes_counter,
                 const std::vector<T>& codes);
 
-    T Decode(const std::vector<char>& sequence, bool* is_decoded);
-
     Iterator Begin() {
         return Iterator(tree_.get());
     }
 
     void Dump();
 private:
-    void Dump(Node<T>* node, std::string cur_path);
+    void Dump(Node<T>* node, const std::string& cur_path);
 
     std::unique_ptr<Node<T>> tree_ = nullptr;
 
@@ -90,29 +86,13 @@ HuffmanTree<T>::HuffmanTree(const std::vector<int>& codes_counter,
     int current_length = 0;
     current_node_ = tree_.get();
     int code_idx = 0;
-    for (int code_length = 1; code_length <= 16; ++code_length) {
-        int code_counter = codes_counter[code_length-1];
+    for (int code_length = 1; code_length <= codes_counter.size(); ++code_length) {
+        int code_counter = codes_counter[code_length - 1];
         for (int i = 0; i < code_counter; ++i) {
             SetNewNode(codes[code_idx++], code_length - current_length);
             current_length = code_length - 1;
         }
     }
-}
-
-template<class T>
-T HuffmanTree<T>::Decode(const std::vector<char>& sequence, bool* is_decoded) {
-    current_node_ = tree_.get();
-    for (const auto& val : sequence) {
-        if ((val == 0) and (current_node_->left)) {
-            current_node_ = current_node_->left.get();
-        } else if ((val == 1) and (current_node_->right)) {
-            current_node_ = current_node_->right.get();
-        } else {
-            throw std::runtime_error("Huffman decoding: wrong direction");
-        }
-    }
-    *is_decoded = (!current_node_->left) and (!current_node_->right);
-    return current_node_->value;
 }
 
 template<class T>
@@ -151,7 +131,7 @@ void HuffmanTree<T>::Dump() {
 }
 
 template<class T>
-void HuffmanTree<T>::Dump(Node<T>* node, std::string cur_path) {
+void HuffmanTree<T>::Dump(Node<T>* node, const std::string& cur_path) {
     if ((node->left == nullptr) and (node->right == nullptr)) {
         std::cout << cur_path << " = " << node->value << "\n";
     }
