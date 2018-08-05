@@ -34,62 +34,9 @@ Image JPGDecoder::Decode() {
         throw std::runtime_error("File doesn't have jpg format");
     }
     ParseJPG();
-
-    for (const auto& table: y_channel_tables_) {
-        y_channel_tables2_.emplace_back(MakeIDCTransform(table));
-    }
-    for (const auto& table: cb_channel_tables_) {
-        cb_channel_tables2_.emplace_back(MakeIDCTransform(table));
-    }
-    for (const auto& table: cr_channel_tables_) {
-        cr_channel_tables2_.emplace_back(MakeIDCTransform(table));
-    }
-    std::cout << ": " << y_channel_tables2_.size() << "\n";
-    std::cout << ": " << cb_channel_tables2_.size() << "\n";
-    std::cout << ": " << cr_channel_tables2_.size() << "\n";
-    std::cout << ": " << height_ << "x" << width_ << "\n";
-
-    std::cout << "--- fill y channel --- \n";
-    std::vector<std::vector<int>> y_channel(32, std::vector<int>(32, 0));
-    // TODO: fix
-    for (size_t i = 0; i < y_channel_tables2_.size(); ++i) {
-        int block_row = i / 8 * 2 + (i % 4) / 2;
-        int block_col = i / 4 % 2 * 2 + i % 4 % 2;
-
-        for (int y = block_row * 8; y < (block_row + 1) * 8; ++y) {
-            for (int x = block_col * 8; x < (block_col + 1) * 8; ++x) {
-                y_channel[y][x] = y_channel_tables2_[i].at(y - block_row * 8, x - block_col * 8);
-            }
-        }
-    }
-
-    std::cout << "--- fill others channels --- \n";
-    std::vector<std::vector<int>> cb_channel(16, std::vector<int>(16, 0));
-    std::vector<std::vector<int>> cr_channel(16, std::vector<int>(16, 0));
-    for (size_t i = 0; i < cb_channel_tables2_.size(); ++i) {
-        int block_row = i / 2;
-        int block_col = i % 2;
-
-        for (int y = block_row * 8; y < (block_row + 1) * 8; ++y) {
-            for (int x = block_col * 8; x < (block_col + 1) * 8; ++x) {
-                cb_channel[y][x] = cb_channel_tables2_[i].at(y - block_row * 8, x - block_col * 8);
-                cr_channel[y][x] = cr_channel_tables2_[i].at(y - block_row * 8, x - block_col * 8);
-            }
-        }
-    }
-
-    std::cout << "--- create image ---\n";
-
-    auto image = Image(width_, height_);
-    image.SetComment(comment_);
-
-    for (int y = 0; y < 32; ++y) {
-        for (int x = 0; x < 32; ++x) {
-            auto pixel = YCbCrToRGB(y_channel[y][x], cb_channel[y/2][x/2], cr_channel[y/2][x/2]);
-            image.SetPixel(y, x, pixel);
-        }
-    }
-
+    MakeIDCTransform();
+    FillChannels();
+    auto image = GetRGBImage();
     return image;
 }
 
@@ -248,10 +195,10 @@ void JPGDecoder::ParseSOF0() {
         max_horizontal_thinning = std::max(max_horizontal_thinning, horizontal_thinning);
         max_vertical_thinning = std::max(max_vertical_thinning, vertical_thinning);
     }
-    for (auto& elem: sof0_descriptors_) {
-        elem.second.horizontal_thinning = max_horizontal_thinning / elem.second.horizontal_thinning;
-        elem.second.vertical_thinning = max_vertical_thinning / elem.second.vertical_thinning;
-    }
+//    for (auto& elem: sof0_descriptors_) {
+//        elem.second.horizontal_thinning = max_horizontal_thinning / elem.second.horizontal_thinning;
+//        elem.second.vertical_thinning = max_vertical_thinning / elem.second.vertical_thinning;
+//    }
 }
 
 void JPGDecoder::ParseSOS() {
@@ -307,46 +254,85 @@ void JPGDecoder::FillChannelTables() {
 void JPGDecoder::FillChannelTablesRound() {
     std::cout << "--- FillChannelTablesRound ---\n";
 
-    // y components
-    int y_components_count = 4; // horizontal = 2, vertical = 2
+    for (int channel_id: channels_ids_) {
+        int channel_parts_count = sof0_descriptors_[channel_id].vertical_thinning *
+                sof0_descriptors_[channel_id].horizontal_thinning;
 
-    for (int i = 0; i < y_components_count; ++i) {
-        y_channel_tables_.emplace_back(GetNextChannelTable(1));
+        for (int channel_part_idx = 0; channel_part_idx < channel_parts_count; ++channel_part_idx) {
+            channel_tables_[channel_id].emplace_back(GetNextChannelTable(channel_id));
 
-        auto& new_matrix = y_channel_tables_.back();
-        new_matrix.Dump();
-
-        // Fix DC coeff
-        if (y_channel_tables_.size() > 1) {
-            new_matrix.at(0, 0) += y_channel_tables_[y_channel_tables_.size()-2].at(0, 0);
+            // Fix DC coeff
+            auto& new_matrix = channel_tables_[channel_id].back();
+            new_matrix.Dump();
+            if (channel_tables_[channel_id].size() > 1) {
+                new_matrix.at(0, 0) += std::prev(channel_tables_[channel_id].end(), 2)->at(0, 0);
+            }
         }
     }
-    // cb components
-    int cb_components_count = 1;
-    for (int i = 0; i < cb_components_count; ++i) {
-        cb_channel_tables_.emplace_back(GetNextChannelTable(2));
+}
 
-        auto& new_matrix = cb_channel_tables_.back();
-        new_matrix.Dump();
+SquareMatrixDouble JPGDecoder::GetNextChannelTable(int channel_id) {
+    std::cout << "--- GetNextChannelTable ---\n";
+    std::vector<int> coeffs; // dc and ac coefficients
+    coeffs.reserve(kTableSide*kTableSide);
 
-        // Fix DC coeff
-        if (cb_channel_tables_.size() > 1) {
-            new_matrix.at(0, 0) += cb_channel_tables_[cb_channel_tables_.size()-2].at(0, 0);
+    int dc_coeff = GetDCCoeff(channel_id);
+    coeffs.push_back(dc_coeff);
+
+    while ((coeffs.size() < kTableSide*kTableSide)) {
+        auto ac_coeffs = GetACCoeffs(channel_id);
+        if (ac_coeffs.first == -1) {
+            break;
         }
+        coeffs.resize(coeffs.size()+ac_coeffs.first);
+        coeffs.push_back(ac_coeffs.second);
     }
-    // cr components
-    int cr_components_count = 1;
-    for (int i = 0; i < cr_components_count; ++i) {
-        cr_channel_tables_.emplace_back(GetNextChannelTable(3));
+    auto matrix = SquareMatrixDouble::CreateFromZigZag(kTableSide, coeffs, 0);
 
-        auto& new_matrix = cr_channel_tables_.back();
-        new_matrix.Dump();
+    // Quantize
+    int dqt_table_id = sof0_descriptors_[channel_id].dqt_table_id;
+    const auto& quantize_matrix = dqt_tables_[dqt_table_id];
+    matrix.Multiply(quantize_matrix);
 
-        // Fix DC coeffs
-        if (cr_channel_tables_.size() > 1) {
-            new_matrix.at(0, 0) += cr_channel_tables_[cr_channel_tables_.size()-2].at(0, 0);
-        }
+    return matrix;
+}
+
+int JPGDecoder::GetDCCoeff(int channel_id) {
+    int table_id = sos_descriptors_[channel_id].huffman_table_dc_id;
+    DHTDescriptor descriptor{table_id, DC};
+    const auto& huffman_tree_pair_it = huffman_trees_.find(descriptor);
+    if (huffman_tree_pair_it != huffman_trees_.end()) {
+        throw std::runtime_error("DHT descriptor not found for DC coeff");
     }
+    auto it = huffman_tree_pair_it->second.Begin();
+
+    int value = GetNextLeafValue(it);
+    if (!value) {
+        return value;
+    }
+    // Then value is length of coeff in bits
+    int length = value;
+    value = NextBitsToACDCCoeff(length);
+    return value;
+}
+
+// return pair: (number of zeros, coeff value)
+// number of zeros = -1 means all rest values are zeros
+std::pair<int, int> JPGDecoder::GetACCoeffs(int channel_id) {
+    int table_id = sos_descriptors_[channel_id].huffman_table_ac_id;
+    DHTDescriptor descriptor{table_id, AC};
+    const auto& huffman_tree_pair_it = huffman_trees_.find(descriptor);
+    assert(huffman_tree_pair_it != huffman_trees_.end());
+    auto it = huffman_tree_pair_it->second.Begin();
+
+    uint8_t value = GetNextLeafValue(it);
+    if (value == 0) {
+        return std::make_pair(-1, 0);
+    }
+    int zeros_count = value >> 4;
+    int length = value & 0xf;
+    int result = NextBitsToACDCCoeff(length);
+    return std::make_pair(zeros_count, result);
 }
 
 int JPGDecoder::GetNextLeafValue(HuffmanTreeInt::Iterator& huffman_tree_it) {
@@ -374,87 +360,63 @@ int JPGDecoder::NextBitsToACDCCoeff(int length) {
             inversed_value = true;
         }
     }
-//    std::cout << "NextBitsToACDCCoeff\n";
-//    std::cout << "value: " << value << "\ninversed_value: " << inversed_value << "\n";
     if (inversed_value) {
         value = value - std::pow(2.0, length) + 1;
     }
     return value;
 }
 
-
-int JPGDecoder::GetDCCoeff(int channel_id) {
-    //std::cout << "--- GetDCCoeff ---\n";
-    int table_id = sos_descriptors_[channel_id].huffman_table_dc_id;
-    DHTDescriptor descriptor{table_id, DC};
-    const auto& huffman_tree_pair_it = huffman_trees_.find(descriptor);
-    assert(huffman_tree_pair_it != huffman_trees_.end());
-    auto it = huffman_tree_pair_it->second.Begin();
-
-    int value = GetNextLeafValue(it);
-    if (!value) {
-        return value;
-    }
-    // then value is length of coeff in bits
-    int length = value;
-    value = NextBitsToACDCCoeff(length);
-    return value;
-}
-
-// return pair: (number of zeros, coeff value)
-// number of zeros = -1 means all rest values are zeros
-std::pair<int, int> JPGDecoder::GetACCoeffs(int channel_id) {
-    //std::cout << "--- GetACCoeffs ---\n";
-    int table_id = sos_descriptors_[channel_id].huffman_table_ac_id;
-    DHTDescriptor descriptor{table_id, AC};
-    const auto& huffman_tree_pair_it = huffman_trees_.find(descriptor);
-    assert(huffman_tree_pair_it != huffman_trees_.end());
-    auto it = huffman_tree_pair_it->second.Begin();
-
-    uint8_t value = GetNextLeafValue(it);
-    if (value == 0) {
-        return std::make_pair(-1, 0);
-    }
-//    std::cout << "ac value: " << int(value) << " ";
-    int zeros_count = value >> 4;
-    int length = value & 0xf;
-//    std::cout << "length: " << length << "\n";
-    int result = NextBitsToACDCCoeff(length);
-    return std::make_pair(zeros_count, result);
-}
-
-SquareMatrixInt JPGDecoder::GetNextChannelTable(int channel_id) {
-    std::cout << "--- GetNextChannelTable ---\n";
-    std::vector<int> coeffs;
-
-    int dc_coeff = GetDCCoeff(channel_id);
-
-    coeffs.push_back(dc_coeff);
-    while ((coeffs.size() < 64)) {
-        auto ac_coeffs = GetACCoeffs(channel_id);
-        if (ac_coeffs.first == -1) {
-            break;
-        }
-        for (int i = 0; i < ac_coeffs.first; ++i) {
-            coeffs.push_back(0);
-        }
-        coeffs.push_back(ac_coeffs.second);
-    }
-    auto matrix = SquareMatrixInt::CreateFromZigZag(8, coeffs, 0);
-
-    // Quantize - multiplying
-    int dqt_table_id = sof0_descriptors_[channel_id].dqt_table_id;
-    const auto& quantize_matrix = dqt_tables_.find(dqt_table_id)->second;
-    matrix.Multiply(quantize_matrix);
-
-    return matrix;
-}
-
-SquareMatrixDouble JPGDecoder::MakeIDCTransform(const SquareMatrixInt& matrix) {
+void JPGDecoder::MakeIDCTransform() {
     std::cout << "--- MakeIDCTransform ---\n";
+    for (int channel_id: channels_ids_) {
+        for (auto& channel_table: channel_tables_[channel_id]) {
+            matrix_transformer_.MakeIDCTransform(&channel_table);
+        }
+    }
+}
 
-    SquareMatrixDouble result_matrix(matrix);
-    matrix_transformer_.MakeIDCTransform(&result_matrix);
+void JPGDecoder::FillChannels() {
+    std::cout << "--- fill y channel --- \n";
+    std::vector<std::vector<int>> y_channel(32, std::vector<int>(32, 0));
+    // TODO: fix
+    for (size_t i = 0; i < y_channel_tables2_.size(); ++i) {
+        int block_row = i / 8 * 2 + (i % 4) / 2;
+        int block_col = i / 4 % 2 * 2 + i % 4 % 2;
 
-    return result_matrix;
+        for (int y = block_row * 8; y < (block_row + 1) * 8; ++y) {
+            for (int x = block_col * 8; x < (block_col + 1) * 8; ++x) {
+                y_channel[y][x] = y_channel_tables2_[i].at(y - block_row * 8, x - block_col * 8);
+            }
+        }
+    }
+
+    std::cout << "--- fill others channels --- \n";
+    std::vector<std::vector<int>> cb_channel(16, std::vector<int>(16, 0));
+    std::vector<std::vector<int>> cr_channel(16, std::vector<int>(16, 0));
+    for (size_t i = 0; i < cb_channel_tables2_.size(); ++i) {
+        int block_row = i / 2;
+        int block_col = i % 2;
+
+        for (int y = block_row * 8; y < (block_row + 1) * 8; ++y) {
+            for (int x = block_col * 8; x < (block_col + 1) * 8; ++x) {
+                cb_channel[y][x] = cb_channel_tables2_[i].at(y - block_row * 8, x - block_col * 8);
+                cr_channel[y][x] = cr_channel_tables2_[i].at(y - block_row * 8, x - block_col * 8);
+            }
+        }
+    }
+}
+
+Image JPGDecoder::GetRGBImage() {
+    std::cout << "--- GetRGBImage ---\n";
+    auto image = Image(width_, height_);
+    image.SetComment(comment_);
+
+    for (int y = 0; y < 32; ++y) {
+        for (int x = 0; x < 32; ++x) {
+            auto pixel = YCbCrToRGB(y_channel[y][x], cb_channel[y/2][x/2], cr_channel[y/2][x/2]);
+            image.SetPixel(y, x, pixel);
+        }
+    }
+
+    return image;
 }

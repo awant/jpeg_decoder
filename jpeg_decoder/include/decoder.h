@@ -71,26 +71,23 @@ private:
     std::unordered_map<int, ChannelDescriptor> sof0_descriptors_;
     std::unordered_map<int, SOSDescriptor> sos_descriptors_;
     std::vector<int> channels_ids_;
-    std::unordered_map<int, std::vector<SquareMatrixInt>> channel_tables_;
-
-    std::vector<SquareMatrixInt> y_channel_tables_;
-    std::vector<SquareMatrixInt> cb_channel_tables_;
-    std::vector<SquareMatrixInt> cr_channel_tables_;
-
-    std::vector<SquareMatrixDouble> y_channel_tables2_;
-    std::vector<SquareMatrixDouble> cb_channel_tables2_;
-    std::vector<SquareMatrixDouble> cr_channel_tables2_;
+    std::unordered_map<int, std::vector<SquareMatrixDouble>> channel_tables_;
+    std::vector<std::vector<int>> y_channel;
+    std::vector<std::vector<int>> cb_channel;
+    std::vector<std::vector<int>> cr_channel;
 
     // image info
     uint32_t height_ = 0, width_ = 0;
     std::string comment_;
 
-
     bool IsValidFormat();
 
     void ParseJPG();
-    void ParseNextSection();
+    void MakeIDCTransform();
+    void FillChannels();
+    Image GetRGBImage();
 
+    void ParseNextSection();
     void ParseComment();
     void ParseDHT();
     void ParseDQT();
@@ -103,10 +100,9 @@ private:
     int GetDCCoeff(int channel_id);
     std::pair<int, int> GetACCoeffs(int channel_id);
 
-    SquareMatrixInt GetNextChannelTable(int channel_id);
+    SquareMatrixDouble GetNextChannelTable(int channel_id);
     void FillChannelTablesRound();
     void FillChannelTables();
 
-    SquareMatrixDouble MakeIDCTransform(const SquareMatrixInt& matrix);
     RGB YCbCrToRGB(double Y, double Cb, double Cr);
 };
