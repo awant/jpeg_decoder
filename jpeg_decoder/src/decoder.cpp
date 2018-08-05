@@ -360,7 +360,7 @@ int JPGDecoder::NextBitsToACDCCoeff(int length) {
             inversed_value = true;
         }
     }
-    if (inversed_value) { 
+    if (inversed_value) {
         value = value - std::pow(2.0, length) + 1;
     }
     return value;
