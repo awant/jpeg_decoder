@@ -23,9 +23,9 @@ RGB JPGDecoder::YCbCrToRGB(double Y, double Cb, double Cr) {
     pixel.g = static_cast<int>(Y - 0.34414 * Cb - 0.71414 * Cr + 128);
     pixel.b = static_cast<int>(Y + 1.772 * Cb + 128);
 
-    pixel.r = std::max(0, std::min(pixel.r, 255));
-    pixel.r = std::max(0, std::min(pixel.g, 255));
-    pixel.r = std::max(0, std::min(pixel.b, 255));
+    pixel.r = clip(pixel.r, 0, 255);
+    pixel.r = clip(pixel.g, 0, 255);
+    pixel.r = clip(pixel.b, 0, 255);
     return pixel;
 }
 
@@ -44,15 +44,6 @@ Image JPGDecoder::Decode() {
     for (const auto& table: cr_channel_tables_) {
         cr_channel_tables2_.emplace_back(MakeIDCTransform(table));
     }
-//    std::cout << "y_channel_tables_.front\n";
-//    y_channel_tables_.front().Dump();
-//    std::cout << "y_channel_tables2_.front\n";
-//    y_channel_tables2_.front().Dump();
-//    std::cout << "cb_channel_tables2_.front\n";
-//    cb_channel_tables2_.front().Dump();
-//    std::cout << "cr_channel_tables2_.front\n";
-//    cr_channel_tables2_.front().Dump();
-
     std::cout << ": " << y_channel_tables2_.size() << "\n";
     std::cout << ": " << cb_channel_tables2_.size() << "\n";
     std::cout << ": " << cr_channel_tables2_.size() << "\n";
@@ -113,7 +104,6 @@ void JPGDecoder::ParseJPG() {
 }
 
 void JPGDecoder::ParseNextSection() {
-    //std::cout << "before read word: " << reader_.IsCacheEmpty() << "\n";
     auto marker = reader_.ReadWord();
     std::cout << "MARKER: " << marker << "\n";
     switch (marker) {
@@ -143,33 +133,36 @@ void JPGDecoder::ParseNextSection() {
 
 void JPGDecoder::ParseComment() {
     std::cout << "--- ParseComment ---" << std::endl;
-    int comment_size = reader_.ReadWord() - 2;
+    int comment_size = reader_.ReadWord() - COMMENT_HEADER_SIZE;
     if (comment_size <= 0) {
-        throw std::runtime_error("comments size corrupted");
+        throw std::runtime_error("comment size corrupted");
     }
-    auto* buffer = new char[comment_size];
-    reader_.Read(buffer, static_cast<size_t>(comment_size));
-    comment_ = buffer;
-    // don't use unique_ptr - excessive complication
-    delete[] buffer;
+    auto buffer = std::make_unique<char[]>(static_cast<size_t>(comment_size));
+    reader_.Read(buffer.get(), static_cast<size_t>(comment_size));
+    comment_ = buffer.get();
     std::cout << "Comment: " << comment_ << "\n";
 }
 
 void JPGDecoder::ParseDHT() {
     std::cout << "--- ParseDHT ---" << std::endl;
     int size = reader_.ReadWord();
+    if (size <= 0) {
+        throw std::runtime_error("DHT size corrupted");
+    }
     auto coeff_type = static_cast<CoeffType>(reader_.ReadHalfByte());
     int table_id = reader_.ReadHalfByte();
     std::cout << "type: " << coeff_type << " table id: " << table_id << std::endl;
 
-    std::vector<int> codes_counters(16);
+    std::vector<int> codes_counters(MAX_HUFFMAN_CODE_LEN);
     size_t codes_counter = 0;
-    for (size_t i = 0; i < 16; ++i) {
+    for (size_t i = 0; i < MAX_HUFFMAN_CODE_LEN; ++i) {
         codes_counters[i] = reader_.ReadByte();
         codes_counter += codes_counters[i];
         std::cout << "Codes of length " << i << " bits: " << codes_counters[i] << "\n";
     }
-    assert((size-16-3) == codes_counter);
+    if (static_cast<int>(DHT_HEADER_SIZE + MAX_HUFFMAN_CODE_LEN + codes_counter) != size) {
+        throw std::runtime_error("DHT body corrupted");
+    }
     std::vector<int> values(codes_counter);
     std::cout << "codes: ";
     for (size_t i = 0; i < codes_counter; ++i) {
@@ -186,17 +179,20 @@ void JPGDecoder::ParseDHT() {
 }
 
 void JPGDecoder::ParseDQT() {
-    // Quantization table
     std::cout << "--- ParseDQT ---" << std::endl;
-    int size = reader_.ReadWord() - 3;
+    int size = reader_.ReadWord() - DQT_HEADER_SIZE;
     if (size <= 0) {
-        throw std::runtime_error("DHT size corrupted");
+        throw std::runtime_error("DQT size corrupted");
     }
-    int value_size = reader_.ReadHalfByte() + 1; // size of value in table in bytes
-    assert(value_size == 1 || value_size == 2);
+    int value_size = reader_.ReadHalfByte() + 1; // size of value in table in bytes: 0 -> 1, 1 -> 2
+    if ((value_size != 1) && (value_size != 2)) {
+        throw std::runtime_error("DQT wrong value size");
+    }
     int table_id = reader_.ReadHalfByte();
-    size_t values_count = static_cast<size_t>(size) / value_size;
-    assert(values_count == 64);
+    auto values_count = static_cast<size_t>(size);
+    if (values_count != kTableSide * kTableSide) {
+        throw std::runtime_error("DQT wrong values count");
+    }
 
     std::cout << "value size: " << values_count << " table id: " << table_id << std::endl;
 
@@ -204,81 +200,92 @@ void JPGDecoder::ParseDQT() {
     for (size_t i = 0; i < values_count; ++i) {
         values[i] = value_size == 1 ? reader_.ReadByte() : reader_.ReadWord();
     }
-    dqt_tables_.emplace(table_id, SquareMatrixInt::CreateFromZigZag(8, values, 0xff));
+    dqt_tables_.emplace(table_id, SquareMatrixInt::CreateFromZigZag(kTableSide, values, 0xff));
 }
 
 void JPGDecoder::ParseSOF0() {
     std::cout << "--- ParseSOF0 ---" << std::endl;
     int size = reader_.ReadWord();
+    if (size <= kSOF0HeaderSize) {
+        throw std::runtime_error("SOF0 size corrupted");
+    }
+
     int precision = reader_.ReadByte();
-    assert(precision == 8);
+    if (precision != kDefaultChannelPrecision) {
+        throw std::runtime_error("SOF0 wrong channel precision");
+    }
 
     height_ = reader_.ReadWord();
     width_ = reader_.ReadWord();
 
-    int components_count = reader_.ReadByte();
-    assert(components_count == 3);
+    uint8_t components_count = reader_.ReadByte();
+    if (components_count != kComponentsCount) {
+        throw std::runtime_error("SOF0 wrong components count");
+    }
 
     std::cout << "precision: " << std::dec << precision
               << " size: (" << height_ << ", " << width_ << ") "
               << "components: " << components_count << std::endl;
 
-    int max_horizontal_thinning = 0, max_vertical_thinning = 0;
-    sof0_descriptors_.resize(4);
+    uint8_t max_horizontal_thinning = 0, max_vertical_thinning = 0;
 
-    for (size_t i = 0; i < components_count; ++i) {
-        int id = reader_.ReadByte();
-        std::cout << "ch id: " << id;
-        assert(id < 4 && id >= 0);
-        int horizontal_thinning = reader_.ReadHalfByte();
-        int vertical_thinning = reader_.ReadHalfByte();
+    for (size_t component_idx = 0; component_idx < components_count; ++component_idx) {
+        uint8_t channel_id = reader_.ReadByte();
+        uint8_t horizontal_thinning = reader_.ReadHalfByte();
+        uint8_t vertical_thinning = reader_.ReadHalfByte();
+        uint8_t dqt_table_id = reader_.ReadByte();
 
-        int dqt_table_id = reader_.ReadByte();
-
-        sof0_descriptors_[id] = ChannelDescriptor{
+        sof0_descriptors_[channel_id] = ChannelDescriptor{
                 horizontal_thinning,
                 vertical_thinning,
                 dqt_table_id
         };
-        std::cout << " thinning: (" << horizontal_thinning << ", " << vertical_thinning << ") "
+
+        std::cout << "channel id: " << channel_id
+                  << " thinning: (" << horizontal_thinning << ", " << vertical_thinning << ") "
                   << "dqt_table_id: " << dqt_table_id << std::endl;
 
         max_horizontal_thinning = std::max(max_horizontal_thinning, horizontal_thinning);
         max_vertical_thinning = std::max(max_vertical_thinning, vertical_thinning);
     }
-    for (size_t i = 1; i < components_count+1; ++i) {
-        sof0_descriptors_[i].horizontal_thinning = max_horizontal_thinning / sof0_descriptors_[i].horizontal_thinning;
-        sof0_descriptors_[i].vertical_thinning = max_vertical_thinning / sof0_descriptors_[i].vertical_thinning;
+    for (auto& elem: sof0_descriptors_) {
+        elem.second.horizontal_thinning = max_horizontal_thinning / elem.second.horizontal_thinning;
+        elem.second.vertical_thinning = max_vertical_thinning / elem.second.vertical_thinning;
     }
 }
 
 void JPGDecoder::ParseSOS() {
     std::cout << "--- ParseSOS ---" << std::endl;
-    int header_size = reader_.ReadWord();
+    uint16_t header_size = reader_.ReadWord();
     std::cout << "header_size: " << std::dec << header_size << "\n";
-    int components_count = reader_.ReadByte();
-    assert(components_count == 3);
+    uint8_t components_count = reader_.ReadByte();
+    if (components_count != kComponentsCount) {
+        throw std::runtime_error("SOS wrong components count");
+    }
+    channels_ids_.reserve(components_count);
 
-    const int max_channel_id = 4;
-    sos_descriptors_.resize(max_channel_id);
-
-    for (int i = 0; i < components_count; ++i) {
-        int channel_id = reader_.ReadByte();
-        assert((channel_id < 4) && (channel_id >= 0));
-
-        int huffman_table_dc_id = reader_.ReadHalfByte();
-        int huffman_table_ac_id = reader_.ReadHalfByte();
+    for (uint8_t component_idx = 0; component_idx < components_count; ++component_idx) {
+        uint8_t channel_id = reader_.ReadByte();
+        uint8_t huffman_table_dc_id = reader_.ReadHalfByte();
+        uint8_t huffman_table_ac_id = reader_.ReadHalfByte();
 
         sos_descriptors_[channel_id] = SOSDescriptor{
                 huffman_table_dc_id,
                 huffman_table_ac_id
         };
+        channels_ids_[component_idx] = channel_id;
+
         std::cout << "channel id: " << channel_id
                   << " dc table: " << huffman_table_dc_id
                   << " ac table: " << huffman_table_ac_id << "\n";
     }
-    header_size -= 9;
-    for (int i = 0; i < header_size; ++i) {
+    if (header_size <= components_count * 2 - 3) {
+        throw std::runtime_error("SOS header size corrupted");
+    }
+    header_size = static_cast<uint16_t>(header_size - components_count * 2 - 3);
+
+    // Pass bytes from header
+    for (int byte_idx = 0; byte_idx < header_size; ++byte_idx) {
         reader_.ReadByte();
     }
     // Read and decode real data
@@ -289,17 +296,57 @@ void JPGDecoder::FillChannelTables() {
     while (!is_parsing_done_) {
         try {
             FillChannelTablesRound();
-        }
-        catch (const std::runtime_error&) {
-            // Clean current byte and check if next 2 bytes is end marker
+        } catch (const std::runtime_error&) {
+            // Clean current byte and check if next 2 bytes are end marker
             reader_.CleanCache();
             break;
         }
     }
-    std::cout << "last tables\n";
-    y_channel_tables_.back().Dump();
-    cb_channel_tables_.back().Dump();
-    cr_channel_tables_.back().Dump();
+}
+
+void JPGDecoder::FillChannelTablesRound() {
+    std::cout << "--- FillChannelTablesRound ---\n";
+
+    // y components
+    int y_components_count = 4; // horizontal = 2, vertical = 2
+
+    for (int i = 0; i < y_components_count; ++i) {
+        y_channel_tables_.emplace_back(GetNextChannelTable(1));
+
+        auto& new_matrix = y_channel_tables_.back();
+        new_matrix.Dump();
+
+        // Fix DC coeff
+        if (y_channel_tables_.size() > 1) {
+            new_matrix.at(0, 0) += y_channel_tables_[y_channel_tables_.size()-2].at(0, 0);
+        }
+    }
+    // cb components
+    int cb_components_count = 1;
+    for (int i = 0; i < cb_components_count; ++i) {
+        cb_channel_tables_.emplace_back(GetNextChannelTable(2));
+
+        auto& new_matrix = cb_channel_tables_.back();
+        new_matrix.Dump();
+
+        // Fix DC coeff
+        if (cb_channel_tables_.size() > 1) {
+            new_matrix.at(0, 0) += cb_channel_tables_[cb_channel_tables_.size()-2].at(0, 0);
+        }
+    }
+    // cr components
+    int cr_components_count = 1;
+    for (int i = 0; i < cr_components_count; ++i) {
+        cr_channel_tables_.emplace_back(GetNextChannelTable(3));
+
+        auto& new_matrix = cr_channel_tables_.back();
+        new_matrix.Dump();
+
+        // Fix DC coeffs
+        if (cr_channel_tables_.size() > 1) {
+            new_matrix.at(0, 0) += cr_channel_tables_[cr_channel_tables_.size()-2].at(0, 0);
+        }
+    }
 }
 
 int JPGDecoder::GetNextLeafValue(HuffmanTreeInt::Iterator& huffman_tree_it) {
@@ -401,50 +448,6 @@ SquareMatrixInt JPGDecoder::GetNextChannelTable(int channel_id) {
     matrix.Multiply(quantize_matrix);
 
     return matrix;
-}
-
-void JPGDecoder::FillChannelTablesRound() {
-    std::cout << "--- FillChannelTablesRound ---\n";
-    // y components
-    int y_components_count = 4; // horizontal = 2, vertical = 2
-
-    for (int i = 0; i < y_components_count; ++i) {
-        y_channel_tables_.emplace_back(GetNextChannelTable(1));
-
-        auto& new_matrix = y_channel_tables_.back();
-        new_matrix.Dump();
-
-        // Fix DC coeff
-        if (y_channel_tables_.size() > 1) {
-            new_matrix.at(0, 0) += y_channel_tables_[y_channel_tables_.size()-2].at(0, 0);
-        }
-    }
-    // cb components
-    int cb_components_count = 1;
-    for (int i = 0; i < cb_components_count; ++i) {
-        cb_channel_tables_.emplace_back(GetNextChannelTable(2));
-
-        auto& new_matrix = cb_channel_tables_.back();
-        new_matrix.Dump();
-
-        // Fix DC coeff
-        if (cb_channel_tables_.size() > 1) {
-            new_matrix.at(0, 0) += cb_channel_tables_[cb_channel_tables_.size()-2].at(0, 0);
-        }
-    }
-    // cr components
-    int cr_components_count = 1;
-    for (int i = 0; i < cr_components_count; ++i) {
-        cr_channel_tables_.emplace_back(GetNextChannelTable(3));
-
-        auto& new_matrix = cr_channel_tables_.back();
-        new_matrix.Dump();
-
-        // Fix DC coeffs
-        if (cr_channel_tables_.size() > 1) {
-            new_matrix.at(0, 0) += cr_channel_tables_[cr_channel_tables_.size()-2].at(0, 0);
-        }
-    }
 }
 
 SquareMatrixDouble JPGDecoder::MakeIDCTransform(const SquareMatrixInt& matrix) {

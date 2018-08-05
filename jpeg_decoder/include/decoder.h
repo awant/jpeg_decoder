@@ -49,6 +49,11 @@ struct SOSDescriptor {
     int huffman_table_ac_id;
 };
 
+template<class T>
+T clip(T value, T min, T max) {
+    return std::max(min, std::min(value, max));
+}
+
 
 class JPGDecoder {
 public:
@@ -63,8 +68,10 @@ private:
 
     HuffmanMap huffman_trees_;
     std::unordered_map<int, SquareMatrixInt> dqt_tables_;
-    std::vector<ChannelDescriptor> sof0_descriptors_;
-    std::vector<SOSDescriptor> sos_descriptors_;
+    std::unordered_map<int, ChannelDescriptor> sof0_descriptors_;
+    std::unordered_map<int, SOSDescriptor> sos_descriptors_;
+    std::vector<int> channels_ids_;
+    std::unordered_map<int, std::vector<SquareMatrixInt>> channel_tables_;
 
     std::vector<SquareMatrixInt> y_channel_tables_;
     std::vector<SquareMatrixInt> cb_channel_tables_;
