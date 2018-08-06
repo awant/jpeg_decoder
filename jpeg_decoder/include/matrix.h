@@ -139,6 +139,21 @@ public:
         return *this;
     }
 
+    void Map(const Point& upper_left_corner, const Point& lower_right_corner, const Matrix<T>& rhs) {
+        int width = lower_right_corner.x - upper_left_corner.x;
+        int height = lower_right_corner.y - upper_left_corner.y;
+        assert(rhs.GetWidth() == width);
+        assert(rhs.GetHeight() == height);
+        assert(lower_right_corner.y < height_);
+        assert(lower_right_corner.x < width_);
+        // map values
+        for (int y = upper_left_corner.y; y < lower_right_corner.y; ++y) {
+            for (int x = upper_left_corner.x; x < lower_right_corner.x; ++x) {
+                buffer_[y][x] = rhs.at(y, x);
+            }
+        }
+    }
+
     bool operator==(const Matrix<T>& rhs) const {
         if ((width_ != rhs.GetWidth()) || (height_ != rhs.GetHeight())) {
             return false;

@@ -72,9 +72,10 @@ private:
     std::unordered_map<int, SOSDescriptor> sos_descriptors_;
     std::vector<int> channels_ids_;
     std::unordered_map<int, std::vector<SquareMatrixDouble>> channel_tables_;
-    std::vector<std::vector<int>> y_channel;
-    std::vector<std::vector<int>> cb_channel;
-    std::vector<std::vector<int>> cr_channel;
+    std::unordered_map<int, SquareMatrixInt> channels_;
+//    std::vector<std::vector<int>> y_channel;
+//    std::vector<std::vector<int>> cb_channel;
+//    std::vector<std::vector<int>> cr_channel;
 
     // image info
     uint32_t height_ = 0, width_ = 0;

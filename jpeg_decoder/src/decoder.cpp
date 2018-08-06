@@ -376,6 +376,10 @@ void JPGDecoder::MakeIDCTransform() {
 }
 
 void JPGDecoder::FillChannels() {
+    std::cout << "--- FillChannels ---\n";
+    // ---
+
+
     std::cout << "--- fill y channel --- \n";
     std::vector<std::vector<int>> y_channel(32, std::vector<int>(32, 0));
     // TODO: fix
@@ -402,6 +406,22 @@ void JPGDecoder::FillChannels() {
                 cb_channel[y][x] = cb_channel_tables2_[i].at(y - block_row * 8, x - block_col * 8);
                 cr_channel[y][x] = cr_channel_tables2_[i].at(y - block_row * 8, x - block_col * 8);
             }
+        }
+    }
+}
+
+void FormChannel(channel_id) {
+    channel_tables = ...;
+    horizontal_thinning = ...;
+    vertical_thinning = ...;
+    horizontal_shifts = ...;
+    vertical_shifts = ...;
+
+    int current_table = 0;
+    for (int i = 0; i < horizontal_thinning; ++i) {
+        for (int j = 0; j < vertical_thinning; ++j) {
+            Point upper_left_corner{0, 0}, lower_right_corner{0, 0};
+            channel.Map(upper_left_corner, lower_right_corner);
         }
     }
 }
