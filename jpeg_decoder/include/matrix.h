@@ -148,12 +148,12 @@ public:
         int height = lower_right_corner.y - upper_left_corner.y;
         assert(rhs.GetWidth() == width);
         assert(rhs.GetHeight() == height);
-        assert(lower_right_corner.y < static_cast<int>(height_));
-        assert(lower_right_corner.x < static_cast<int>(width_));
+        assert(lower_right_corner.y <= static_cast<int>(height_));
+        assert(lower_right_corner.x <= static_cast<int>(width_));
         // map values
-        for (int y = upper_left_corner.y; y < lower_right_corner.y; ++y) {
-            for (int x = upper_left_corner.x; x < lower_right_corner.x; ++x) {
-                buffer_[y][x] = rhs.at(y, x);
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                buffer_[upper_left_corner.y+y][upper_left_corner.x+x] = rhs.at(y, x);
             }
         }
     }

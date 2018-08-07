@@ -24,8 +24,8 @@ RGB JPGDecoder::YCbCrToRGB(double Y, double Cb, double Cr) {
     pixel.b = static_cast<int>(Y + 1.772 * Cb + 128);
 
     pixel.r = clip(pixel.r, 0, 255);
-    pixel.r = clip(pixel.g, 0, 255);
-    pixel.r = clip(pixel.b, 0, 255);
+    pixel.g = clip(pixel.g, 0, 255);
+    pixel.b = clip(pixel.b, 0, 255);
     return pixel;
 }
 
@@ -50,7 +50,7 @@ void JPGDecoder::ParseJPG() {
     }
 }
 
-void JPGDecoder::ParseNextSection() {
+void JPGDecoder::ParseNextSection() {q
     auto marker = reader_.ReadWord();
     std::cout << "MARKER: " << marker << "\n";
     switch (marker) {
@@ -147,7 +147,7 @@ void JPGDecoder::ParseDQT() {
     for (size_t i = 0; i < values_count; ++i) {
         values[i] = value_size == 1 ? reader_.ReadByte() : reader_.ReadWord();
     }
-    dqt_tables_.emplace(table_id, SquareMatrixInt::CreateFromZigZag(kTableSide, values, 0xff));
+    dqt_tables_.emplace(table_id, SquareMatrix<int>::CreateFromZigZag(kTableSide, values, 0xff));
 }
 
 void JPGDecoder::ParseSOF0() {
@@ -165,7 +165,7 @@ void JPGDecoder::ParseSOF0() {
     height_ = reader_.ReadWord();
     width_ = reader_.ReadWord();
 
-    uint8_t components_count = reader_.ReadByte();
+    int components_count = reader_.ReadByte();
     if (components_count != kComponentsCount) {
         throw std::runtime_error("SOF0 wrong components count");
     }
@@ -174,17 +174,18 @@ void JPGDecoder::ParseSOF0() {
               << " size: (" << height_ << ", " << width_ << ") "
               << "components: " << components_count << std::endl;
 
-    uint8_t max_horizontal_thinning = 0, max_vertical_thinning = 0;
+    int max_horizontal_thinning = 0, max_vertical_thinning = 0;
 
     for (size_t component_idx = 0; component_idx < components_count; ++component_idx) {
-        uint8_t channel_id = reader_.ReadByte();
-        uint8_t horizontal_thinning = reader_.ReadHalfByte();
-        uint8_t vertical_thinning = reader_.ReadHalfByte();
-        uint8_t dqt_table_id = reader_.ReadByte();
+        int channel_id = reader_.ReadByte();
+        int horizontal_thinning = reader_.ReadHalfByte();
+        int vertical_thinning = reader_.ReadHalfByte();
+        int dqt_table_id = reader_.ReadByte();
 
         sof0_descriptors_[channel_id] = ChannelDescriptor{
                 horizontal_thinning,
                 vertical_thinning,
+                0, 0,
                 dqt_table_id
         };
 
@@ -195,32 +196,32 @@ void JPGDecoder::ParseSOF0() {
         max_horizontal_thinning = std::max(max_horizontal_thinning, horizontal_thinning);
         max_vertical_thinning = std::max(max_vertical_thinning, vertical_thinning);
     }
-//    for (auto& elem: sof0_descriptors_) {
-//        elem.second.horizontal_thinning = max_horizontal_thinning / elem.second.horizontal_thinning;
-//        elem.second.vertical_thinning = max_vertical_thinning / elem.second.vertical_thinning;
-//    }
+    for (auto& elem: sof0_descriptors_) {
+        elem.second.horizontal_thinning_ratio = max_horizontal_thinning / elem.second.horizontal_thinning;
+        elem.second.vertical_thinning_ratio = max_vertical_thinning / elem.second.vertical_thinning;
+    }
 }
 
 void JPGDecoder::ParseSOS() {
     std::cout << "--- ParseSOS ---" << std::endl;
     uint16_t header_size = reader_.ReadWord();
     std::cout << "header_size: " << std::dec << header_size << "\n";
-    uint8_t components_count = reader_.ReadByte();
+    int components_count = reader_.ReadByte();
     if (components_count != kComponentsCount) {
         throw std::runtime_error("SOS wrong components count");
     }
     channels_ids_.reserve(components_count);
 
-    for (uint8_t component_idx = 0; component_idx < components_count; ++component_idx) {
-        uint8_t channel_id = reader_.ReadByte();
-        uint8_t huffman_table_dc_id = reader_.ReadHalfByte();
-        uint8_t huffman_table_ac_id = reader_.ReadHalfByte();
+    for (int component_idx = 0; component_idx < components_count; ++component_idx) {
+        int channel_id = reader_.ReadByte();
+        int huffman_table_dc_id = reader_.ReadHalfByte();
+        int huffman_table_ac_id = reader_.ReadHalfByte();
 
         sos_descriptors_[channel_id] = SOSDescriptor{
                 huffman_table_dc_id,
                 huffman_table_ac_id
         };
-        channels_ids_[component_idx] = channel_id;
+        channels_ids_.push_back(channel_id);
 
         std::cout << "channel id: " << channel_id
                   << " dc table: " << huffman_table_dc_id
@@ -255,10 +256,13 @@ void JPGDecoder::FillChannelTablesRound() {
     std::cout << "--- FillChannelTablesRound ---\n";
 
     for (int channel_id: channels_ids_) {
+        std::cout << "channel_id: " << channel_id << "\n";
         int channel_parts_count = sof0_descriptors_[channel_id].vertical_thinning *
                 sof0_descriptors_[channel_id].horizontal_thinning;
+        std::cout << "channel_parts_count: " << channel_parts_count << "\n";
 
         for (int channel_part_idx = 0; channel_part_idx < channel_parts_count; ++channel_part_idx) {
+            std::cout << "channel_part_idx: " << channel_part_idx << "\n";
             channel_tables_[channel_id].emplace_back(GetNextChannelTable(channel_id));
 
             // Fix DC coeff
@@ -300,11 +304,8 @@ SquareMatrixDouble JPGDecoder::GetNextChannelTable(int channel_id) {
 int JPGDecoder::GetDCCoeff(int channel_id) {
     int table_id = sos_descriptors_[channel_id].huffman_table_dc_id;
     DHTDescriptor descriptor{table_id, DC};
-    const auto& huffman_tree_pair_it = huffman_trees_.find(descriptor);
-    if (huffman_tree_pair_it != huffman_trees_.end()) {
-        throw std::runtime_error("DHT descriptor not found for DC coeff");
-    }
-    auto it = huffman_tree_pair_it->second.Begin();
+    auto& huffman_tree = huffman_trees_[descriptor];
+    auto it = huffman_tree.Begin();
 
     int value = GetNextLeafValue(it);
     if (!value) {
@@ -368,7 +369,7 @@ int JPGDecoder::NextBitsToACDCCoeff(int length) {
 
 void JPGDecoder::MakeIDCTransform() {
     std::cout << "--- MakeIDCTransform ---\n";
-    for (int channel_id: channels_ids_) {
+    for (int channel_id: channels_ids_) { // for every channel
         for (auto& channel_table: channel_tables_[channel_id]) {
             matrix_transformer_.MakeIDCTransform(&channel_table);
         }
@@ -377,53 +378,43 @@ void JPGDecoder::MakeIDCTransform() {
 
 void JPGDecoder::FillChannels() {
     std::cout << "--- FillChannels ---\n";
-    // ---
-
-
-    std::cout << "--- fill y channel --- \n";
-    std::vector<std::vector<int>> y_channel(32, std::vector<int>(32, 0));
-    // TODO: fix
-    for (size_t i = 0; i < y_channel_tables2_.size(); ++i) {
-        int block_row = i / 8 * 2 + (i % 4) / 2;
-        int block_col = i / 4 % 2 * 2 + i % 4 % 2;
-
-        for (int y = block_row * 8; y < (block_row + 1) * 8; ++y) {
-            for (int x = block_col * 8; x < (block_col + 1) * 8; ++x) {
-                y_channel[y][x] = y_channel_tables2_[i].at(y - block_row * 8, x - block_col * 8);
-            }
-        }
-    }
-
-    std::cout << "--- fill others channels --- \n";
-    std::vector<std::vector<int>> cb_channel(16, std::vector<int>(16, 0));
-    std::vector<std::vector<int>> cr_channel(16, std::vector<int>(16, 0));
-    for (size_t i = 0; i < cb_channel_tables2_.size(); ++i) {
-        int block_row = i / 2;
-        int block_col = i % 2;
-
-        for (int y = block_row * 8; y < (block_row + 1) * 8; ++y) {
-            for (int x = block_col * 8; x < (block_col + 1) * 8; ++x) {
-                cb_channel[y][x] = cb_channel_tables2_[i].at(y - block_row * 8, x - block_col * 8);
-                cr_channel[y][x] = cr_channel_tables2_[i].at(y - block_row * 8, x - block_col * 8);
-            }
-        }
+    for (int channel_id: channels_ids_) {
+        std::cout << "channel_id: " << channel_id << "\n";
+        FillChannel(channel_id);
     }
 }
 
-void FormChannel(channel_id) {
-    channel_tables = ...;
-    horizontal_thinning = ...;
-    vertical_thinning = ...;
-    horizontal_shifts = ...;
-    vertical_shifts = ...;
+void JPGDecoder::FillChannel(int channel_id) {
+    std::cout << "--- FillChannel ---\n";
+    int channel_width = width_ / sof0_descriptors_[channel_id].horizontal_thinning_ratio;
+    int channel_height = height_ / sof0_descriptors_[channel_id].vertical_thinning_ratio;
+    std::cout << "channel_width: " << channel_width << "\n";
+    std::cout << "channel_height: " << channel_height << "\n";
+    MatrixDouble channel(channel_height, channel_width, 0);
 
-    int current_table = 0;
-    for (int i = 0; i < horizontal_thinning; ++i) {
-        for (int j = 0; j < vertical_thinning; ++j) {
-            Point upper_left_corner{0, 0}, lower_right_corner{0, 0};
-            channel.Map(upper_left_corner, lower_right_corner);
+    const auto& channel_tables = channel_tables_[channel_id];
+    int channel_table_idx = 0;
+
+    std::cout << "channel_tables size: " << channel_tables.size() << "\n";
+
+    int horizontal_thinning = sof0_descriptors_[channel_id].horizontal_thinning;
+    int vertical_thinning = sof0_descriptors_[channel_id].vertical_thinning;
+    for (int y = 0; y < channel_width; y += horizontal_thinning * kTableSide) {
+        for (int x = 0; x < channel_height; x += vertical_thinning * kTableSide) {
+            // map in big block (thinning) several smaller blocks
+            for (int y_block_idx = 0; y_block_idx < horizontal_thinning * kTableSide; y_block_idx += kTableSide) {
+                for (int x_block_idx = 0; x_block_idx < vertical_thinning * kTableSide; x_block_idx += kTableSide) {
+                    Point upper_left_corner{x+x_block_idx, y+y_block_idx};
+                    Point lower_right_corner{upper_left_corner.x+kTableSide,
+                                             upper_left_corner.y+kTableSide};
+                    std::cout << "upper_left_corner: (" << upper_left_corner.x << ", " << upper_left_corner.y << ")\n";
+                    std::cout << "lower_right_corner: (" << lower_right_corner.x << ", " << lower_right_corner.y << ")\n";
+                    channel.Map(upper_left_corner, lower_right_corner, channel_tables[channel_table_idx++]);
+                }
+            }
         }
     }
+    channels_.emplace(channel_id, channel);
 }
 
 Image JPGDecoder::GetRGBImage() {
@@ -431,12 +422,30 @@ Image JPGDecoder::GetRGBImage() {
     auto image = Image(width_, height_);
     image.SetComment(comment_);
 
-    for (int y = 0; y < 32; ++y) {
-        for (int x = 0; x < 32; ++x) {
-            auto pixel = YCbCrToRGB(y_channel[y][x], cb_channel[y/2][x/2], cr_channel[y/2][x/2]);
+    int k = 0;
+
+    for (uint32_t y = 0; y < width_; ++y) {
+        for (uint32_t x = 0; x < height_; ++x) {
+            std::vector<int> yCbCr;
+            for (int channel_id: channels_ids_) {
+                int y_local = y / sof0_descriptors_[channel_id].vertical_thinning_ratio;
+                int x_local = x / sof0_descriptors_[channel_id].horizontal_thinning_ratio;
+//                std::cout << "channel_id: " << channel_id << "\n";
+//                std::cout << y_local << " " << x_local << "\n";
+//                std::cout << "ratio: " << sof0_descriptors_[channel_id].vertical_thinning_ratio << " "
+//                          << sof0_descriptors_[channel_id].horizontal_thinning_ratio << "\n";
+                yCbCr.push_back(channels_[channel_id].at(y_local, x_local));
+            }
+            std::cout << k << "| ycbcr: ";
+            for (auto& val: yCbCr) {
+                std::cout << val << " ";
+            }
+            std::cout << "\n";
+            auto pixel = YCbCrToRGB(yCbCr[0], yCbCr[1], yCbCr[2]);
+            std::cout << k << "| rgb: " << pixel.r << " " << pixel.g << " " << pixel.b << "\n";
             image.SetPixel(y, x, pixel);
+            ++k;
         }
     }
-
     return image;
 }
