@@ -59,6 +59,10 @@ template <class T>
 class Matrix {
     const double epsilon = 0.001;
 public:
+    Matrix() {
+        std::cout << "construct\n";
+    }
+
     Matrix(size_t height, size_t width, const T& default_value)
             : height_(height), width_(width),
               buffer_(height, std::vector<T>(width, default_value)) {}
@@ -144,8 +148,8 @@ public:
         int height = lower_right_corner.y - upper_left_corner.y;
         assert(rhs.GetWidth() == width);
         assert(rhs.GetHeight() == height);
-        assert(lower_right_corner.y < height_);
-        assert(lower_right_corner.x < width_);
+        assert(lower_right_corner.y < static_cast<int>(height_));
+        assert(lower_right_corner.x < static_cast<int>(width_));
         // map values
         for (int y = upper_left_corner.y; y < lower_right_corner.y; ++y) {
             for (int x = upper_left_corner.x; x < lower_right_corner.x; ++x) {
@@ -195,6 +199,10 @@ public:
         return result;
     }
 
+    SquareMatrix() {
+        std::cout << "SquareMatrix constructor\n";
+    }
+
     SquareMatrix(size_t size, const T& default_value)
             : Matrix<T>(size, default_value) {}
 
@@ -209,7 +217,7 @@ public:
         return this->width_;
     }
 
-    Matrix<T>& FillZigZag(const std::vector<T>& values) {
+    Matrix<T>& FillZigZag(const std::vector<int>& values) {
         if (values.size() > GetSize() * GetSize()) {
             throw std::runtime_error("Matrix can't accommodate result");
         }

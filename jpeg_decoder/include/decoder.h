@@ -35,12 +35,14 @@ struct DHTDescriptorEqual {
 
 using HuffmanTreeInt = HuffmanTree<int>;
 using HuffmanMap = std::unordered_map<DHTDescriptor, HuffmanTreeInt, DHTDescriptorHash, DHTDescriptorEqual>;
-using SquareMatrixInt = SquareMatrix<int>;
+using MatrixDouble = Matrix<double>;
 using SquareMatrixDouble = SquareMatrix<double>;
 
 struct ChannelDescriptor {
     int horizontal_thinning;
     int vertical_thinning;
+    int horizontal_thinning_ratio;
+    int vertical_thinning_ratio;
     int dqt_table_id;
 };
 
@@ -65,17 +67,13 @@ private:
     ByteStreamReader reader_;  // read from stream bytes, words, bits
 
     MatrixTransformer<double> matrix_transformer_; // IDCT transformation
-
     HuffmanMap huffman_trees_;
-    std::unordered_map<int, SquareMatrixInt> dqt_tables_;
+    std::unordered_map<int, SquareMatrix<int>> dqt_tables_;
     std::unordered_map<int, ChannelDescriptor> sof0_descriptors_;
     std::unordered_map<int, SOSDescriptor> sos_descriptors_;
     std::vector<int> channels_ids_;
     std::unordered_map<int, std::vector<SquareMatrixDouble>> channel_tables_;
-    std::unordered_map<int, SquareMatrixInt> channels_;
-//    std::vector<std::vector<int>> y_channel;
-//    std::vector<std::vector<int>> cb_channel;
-//    std::vector<std::vector<int>> cr_channel;
+    std::unordered_map<int, MatrixDouble> channels_;
 
     // image info
     uint32_t height_ = 0, width_ = 0;
@@ -86,6 +84,7 @@ private:
     void ParseJPG();
     void MakeIDCTransform();
     void FillChannels();
+    void FillChannel(int channel_id);
     Image GetRGBImage();
 
     void ParseNextSection();
@@ -97,10 +96,8 @@ private:
 
     int NextBitsToACDCCoeff(int length);
     int GetNextLeafValue(HuffmanTreeInt::Iterator& huffman_tree_it);
-
     int GetDCCoeff(int channel_id);
     std::pair<int, int> GetACCoeffs(int channel_id);
-
     SquareMatrixDouble GetNextChannelTable(int channel_id);
     void FillChannelTablesRound();
     void FillChannelTables();

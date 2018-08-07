@@ -15,7 +15,7 @@ struct Node {
 template <class T>
 class HuffmanTree {
 public:
-    const int MAX_HUFFMAN_COEFF_SIZE = 16;
+    const size_t MAX_HUFFMAN_COEFF_SIZE = 16;
 
     class Iterator {
     public:
@@ -86,10 +86,10 @@ HuffmanTree<T>::HuffmanTree(const std::vector<int>& codes_counter,
     int current_length = 0;
     current_node_ = tree_.get();
     int code_idx = 0;
-    for (int code_length = 1; code_length <= codes_counter.size(); ++code_length) {
+    for (size_t code_length = 1; code_length <= codes_counter.size(); ++code_length) {
         int code_counter = codes_counter[code_length - 1];
         for (int i = 0; i < code_counter; ++i) {
-            SetNewNode(codes[code_idx++], code_length - current_length);
+            SetNewNode(static_cast<T>(codes[code_idx++]), code_length - current_length);
             current_length = code_length - 1;
         }
     }
