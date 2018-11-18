@@ -59,9 +59,7 @@ template <class T>
 class Matrix {
     const double epsilon = 0.001;
 public:
-    Matrix() {
-        std::cout << "construct\n";
-    }
+    Matrix() { }
 
     Matrix(size_t height, size_t width, const T& default_value)
             : height_(height), width_(width),
@@ -146,6 +144,7 @@ public:
     void Map(const Point& upper_left_corner, const Point& lower_right_corner, const Matrix<T>& rhs) {
         int width = lower_right_corner.x - upper_left_corner.x;
         int height = lower_right_corner.y - upper_left_corner.y;
+
         assert(rhs.GetWidth() == width);
         assert(rhs.GetHeight() == height);
         assert(lower_right_corner.y <= static_cast<int>(height_));
@@ -199,9 +198,7 @@ public:
         return result;
     }
 
-    SquareMatrix() {
-        std::cout << "SquareMatrix constructor\n";
-    }
+    SquareMatrix() { }
 
     SquareMatrix(size_t size, const T& default_value)
             : Matrix<T>(size, default_value) {}

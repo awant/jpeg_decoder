@@ -4,10 +4,9 @@
 #include "decoder.h"
 
 Image Decode(const std::string& filename) {
-
     std::ifstream stream(filename, std::ios_base::binary);
     if (!stream.good()) {
-        throw std::runtime_error("Can't open file: " + filename);
+        throw std::runtime_error("Can't open a file: " + filename);
     }
     JPGDecoder decoder(stream);
     Image img = decoder.Decode();
@@ -50,9 +49,15 @@ void JPGDecoder::ParseJPG() {
     }
 }
 
-void JPGDecoder::ParseNextSection() {q
-    auto marker = reader_.ReadWord();
-    std::cout << "MARKER: " << marker << "\n";
+void JPGDecoder::ParseNextSection() {
+    uint16_t marker;
+    try {
+        marker = reader_.ReadWord();
+    } catch (...) {
+        is_parsing_done_ = true;
+        return;
+    }
+    //std::cout << "MARKER: " << marker << "\n";
     switch (marker) {
         case MARKER_COMMENT:
             ParseComment();
@@ -74,7 +79,8 @@ void JPGDecoder::ParseNextSection() {q
             is_parsing_done_ = true;
             break;
         default:
-            std::cout << std::hex << "skip marker: " << std::hex << marker << std::endl;
+            break;
+            //std::cout << std::hex << "skip marker: " << std::hex << marker << std::endl;
     }
 }
 
@@ -90,6 +96,7 @@ void JPGDecoder::ParseComment() {
     std::cout << "Comment: " << comment_ << "\n";
 }
 
+// Таблица Хаффмана.
 void JPGDecoder::ParseDHT() {
     std::cout << "--- ParseDHT ---" << std::endl;
     int size = reader_.ReadWord();
@@ -125,6 +132,8 @@ void JPGDecoder::ParseDHT() {
     huffman_trees_.emplace(descriptor, std::move(tree));
 }
 
+// DQT - таблица квантования. Перемножение до применения обратного ДКП
+// Обычно - пара таблиц размера 8x8
 void JPGDecoder::ParseDQT() {
     std::cout << "--- ParseDQT ---" << std::endl;
     int size = reader_.ReadWord() - DQT_HEADER_SIZE;
@@ -148,8 +157,14 @@ void JPGDecoder::ParseDQT() {
         values[i] = value_size == 1 ? reader_.ReadByte() : reader_.ReadWord();
     }
     dqt_tables_.emplace(table_id, SquareMatrix<int>::CreateFromZigZag(kTableSide, values, 0xff));
+
+    dqt_tables_[table_id].Dump();
 }
 
+// Если есть маркер SOF0, то изображение закодировано базовым методом
+// not progressive method
+// содержится ширина и высота изображения, компоненты,
+// связь компонент с прореживанием и таблицами квантования
 void JPGDecoder::ParseSOF0() {
     std::cout << "--- ParseSOF0 ---" << std::endl;
     int size = reader_.ReadWord();
@@ -202,6 +217,7 @@ void JPGDecoder::ParseSOF0() {
     }
 }
 
+// Закодированное изображение
 void JPGDecoder::ParseSOS() {
     std::cout << "--- ParseSOS ---" << std::endl;
     uint16_t header_size = reader_.ReadWord();
@@ -275,6 +291,13 @@ void JPGDecoder::FillChannelTablesRound() {
     }
 }
 
+void DumpVector(const std::vector<int>& vec) {
+    for (const auto& elem: vec) {
+        std::cout << elem << " ";
+    }
+    std::cout << "\n";
+}
+
 SquareMatrixDouble JPGDecoder::GetNextChannelTable(int channel_id) {
     std::cout << "--- GetNextChannelTable ---\n";
     std::vector<int> coeffs; // dc and ac coefficients
@@ -291,6 +314,8 @@ SquareMatrixDouble JPGDecoder::GetNextChannelTable(int channel_id) {
         coeffs.resize(coeffs.size()+ac_coeffs.first);
         coeffs.push_back(ac_coeffs.second);
     }
+//    std::cout << "coeffs:\n";
+    DumpVector(coeffs);
     auto matrix = SquareMatrixDouble::CreateFromZigZag(kTableSide, coeffs, 0);
 
     // Quantize
@@ -340,6 +365,7 @@ int JPGDecoder::GetNextLeafValue(HuffmanTreeInt::Iterator& huffman_tree_it) {
     int bit = 0;
     while (!huffman_tree_it.Last()) {
         bit = reader_.ReadBit();
+//        std::cout << bit;
         if (bit == 0) {
             huffman_tree_it.LeftStep();
         } else if (bit == 1) {
@@ -388,8 +414,8 @@ void JPGDecoder::FillChannel(int channel_id) {
     std::cout << "--- FillChannel ---\n";
     int channel_width = width_ / sof0_descriptors_[channel_id].horizontal_thinning_ratio;
     int channel_height = height_ / sof0_descriptors_[channel_id].vertical_thinning_ratio;
-    std::cout << "channel_width: " << channel_width << "\n";
-    std::cout << "channel_height: " << channel_height << "\n";
+    std::cout << "channel_width: " << std::dec << channel_width << "\n";
+    std::cout << "channel_height: " << std::dec << channel_height << "\n";
     MatrixDouble channel(channel_height, channel_width, 0);
 
     const auto& channel_tables = channel_tables_[channel_id];
@@ -407,8 +433,11 @@ void JPGDecoder::FillChannel(int channel_id) {
                     Point upper_left_corner{x+x_block_idx, y+y_block_idx};
                     Point lower_right_corner{upper_left_corner.x+kTableSide,
                                              upper_left_corner.y+kTableSide};
-                    std::cout << "upper_left_corner: (" << upper_left_corner.x << ", " << upper_left_corner.y << ")\n";
-                    std::cout << "lower_right_corner: (" << lower_right_corner.x << ", " << lower_right_corner.y << ")\n";
+                    if (channel_table_idx >= channel_tables.size())
+                    {
+                        channels_.emplace(channel_id, channel);
+                        return;
+                    }
                     channel.Map(upper_left_corner, lower_right_corner, channel_tables[channel_table_idx++]);
                 }
             }
@@ -430,19 +459,9 @@ Image JPGDecoder::GetRGBImage() {
             for (int channel_id: channels_ids_) {
                 int y_local = y / sof0_descriptors_[channel_id].vertical_thinning_ratio;
                 int x_local = x / sof0_descriptors_[channel_id].horizontal_thinning_ratio;
-//                std::cout << "channel_id: " << channel_id << "\n";
-//                std::cout << y_local << " " << x_local << "\n";
-//                std::cout << "ratio: " << sof0_descriptors_[channel_id].vertical_thinning_ratio << " "
-//                          << sof0_descriptors_[channel_id].horizontal_thinning_ratio << "\n";
                 yCbCr.push_back(channels_[channel_id].at(y_local, x_local));
             }
-            std::cout << k << "| ycbcr: ";
-            for (auto& val: yCbCr) {
-                std::cout << val << " ";
-            }
-            std::cout << "\n";
             auto pixel = YCbCrToRGB(yCbCr[0], yCbCr[1], yCbCr[2]);
-            std::cout << k << "| rgb: " << pixel.r << " " << pixel.g << " " << pixel.b << "\n";
             image.SetPixel(y, x, pixel);
             ++k;
         }

@@ -4,14 +4,13 @@
 ByteStreamReader::ByteStreamReader(std::istream& stream): stream_(stream) {}
 
 uint8_t ByteStreamReader::ReadRawByte() {
-    uint8_t byte;
-    stream_.read((char*)&byte, 1);
-    if (!stream_) {
+    auto byte = static_cast<uint8_t>(stream_.get());
+    if (!stream_ || !stream_.good()) {
         throw std::runtime_error("Can't read stream");
     }
     last_read_word_ = (last_read_word_ << 8) | byte;
     if (last_read_word_ == 0xffd9) {
-        std::runtime_error("Read end marker");
+        throw std::runtime_error("Read end marker");
     }
     return byte;
 }
@@ -19,6 +18,11 @@ uint8_t ByteStreamReader::ReadRawByte() {
 uint8_t ByteStreamReader::ReadBit() {
     if (cache_size_ == MAX_CACHE_SIZE) { // cache is empty
         cache_ = ReadRawByte();
+        if (cache_ == 0xff) {
+            if (ReadRawByte() != 0) {
+                throw std::runtime_error("Strange marker inside section");
+            }
+        }
         cache_size_ = 0;
     }
     uint8_t result = cache_ >> 7;
