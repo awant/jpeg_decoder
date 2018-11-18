@@ -410,6 +410,8 @@ void JPGDecoder::FillChannels() {
     }
 }
 
+// x <-> by height
+// y <-> by width
 void JPGDecoder::FillChannel(int channel_id) {
     std::cout << "--- FillChannel ---\n";
     int channel_width = width_ / sof0_descriptors_[channel_id].horizontal_thinning_ratio;
@@ -425,19 +427,18 @@ void JPGDecoder::FillChannel(int channel_id) {
 
     int horizontal_thinning = sof0_descriptors_[channel_id].horizontal_thinning;
     int vertical_thinning = sof0_descriptors_[channel_id].vertical_thinning;
-    for (int y = 0; y < channel_width; y += horizontal_thinning * kTableSide) {
-        for (int x = 0; x < channel_height; x += vertical_thinning * kTableSide) {
+
+    for (int y = 0; y < channel_height; y += vertical_thinning * kTableSide) {
+        for (int x = 0; x < channel_width; x += horizontal_thinning * kTableSide) {
             // map in big block (thinning) several smaller blocks
-            for (int y_block_idx = 0; y_block_idx < horizontal_thinning * kTableSide; y_block_idx += kTableSide) {
-                for (int x_block_idx = 0; x_block_idx < vertical_thinning * kTableSide; x_block_idx += kTableSide) {
+            for (int y_block_idx = 0; y_block_idx < vertical_thinning * kTableSide; y_block_idx += kTableSide) {
+                for (int x_block_idx = 0; x_block_idx < horizontal_thinning * kTableSide; x_block_idx += kTableSide) {
                     Point upper_left_corner{x+x_block_idx, y+y_block_idx};
-                    Point lower_right_corner{upper_left_corner.x+kTableSide,
-                                             upper_left_corner.y+kTableSide};
-                    if (channel_table_idx >= channel_tables.size())
-                    {
-                        channels_.emplace(channel_id, channel);
-                        return;
-                    }
+                    Point lower_right_corner{upper_left_corner.x+kTableSide, upper_left_corner.y+kTableSide};
+//                    if (channel_table_idx >= channel_tables.size()) {
+//                        channels_.emplace(channel_id, channel);
+//                        return;
+//                    }
                     channel.Map(upper_left_corner, lower_right_corner, channel_tables[channel_table_idx++]);
                 }
             }
@@ -453,8 +454,8 @@ Image JPGDecoder::GetRGBImage() {
 
     int k = 0;
 
-    for (uint32_t y = 0; y < width_; ++y) {
-        for (uint32_t x = 0; x < height_; ++x) {
+    for (uint32_t y = 0; y < height_; ++y) {
+        for (uint32_t x = 0; x < width_; ++x) {
             std::vector<int> yCbCr;
             for (int channel_id: channels_ids_) {
                 int y_local = y / sof0_descriptors_[channel_id].vertical_thinning_ratio;

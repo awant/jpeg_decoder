@@ -118,7 +118,7 @@ TEST_CASE("FFT Transformation", "[FFT]") {
 }
 
 TEST_CASE("Full decoder process", "[Decoder]") {
-    const std::string filename = "/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/tests/lenna.jpg";
+    const std::string filename = "/Users/romanmarakulin/Projects/jpeg_decoder/jpeg_decoder/tests/bad_quality.jpg";
     Image img = Decode(filename);
 
     auto dot_pos = filename.find('.');

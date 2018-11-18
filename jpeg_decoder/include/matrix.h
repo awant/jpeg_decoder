@@ -5,6 +5,7 @@
 #include <cmath>
 #include <fftw3.h>
 #include <iostream>
+#include <algorithm>
 
 namespace {
     struct Point {
@@ -142,13 +143,10 @@ public:
     }
 
     void Map(const Point& upper_left_corner, const Point& lower_right_corner, const Matrix<T>& rhs) {
-        int width = lower_right_corner.x - upper_left_corner.x;
-        int height = lower_right_corner.y - upper_left_corner.y;
+        // We need also cut width, height if sizes of image not div by 8
+        int width = std::min(lower_right_corner.x, static_cast<int>(width_)) - upper_left_corner.x;
+        int height = std::min(lower_right_corner.y, static_cast<int>(height_)) - upper_left_corner.y;
 
-        assert(rhs.GetWidth() == width);
-        assert(rhs.GetHeight() == height);
-        assert(lower_right_corner.y <= static_cast<int>(height_));
-        assert(lower_right_corner.x <= static_cast<int>(width_));
         // map values
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
