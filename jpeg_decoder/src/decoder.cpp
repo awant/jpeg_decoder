@@ -57,7 +57,6 @@ void JPGDecoder::ParseNextSection() {
         is_parsing_done_ = true;
         return;
     }
-    //std::cout << "MARKER: " << marker << "\n";
     switch (marker) {
         case MARKER_COMMENT:
             ParseComment();
@@ -80,7 +79,6 @@ void JPGDecoder::ParseNextSection() {
             break;
         default:
             break;
-            //std::cout << std::hex << "skip marker: " << std::hex << marker << std::endl;
     }
 }
 
@@ -96,7 +94,7 @@ void JPGDecoder::ParseComment() {
     std::cout << "Comment: " << comment_ << "\n";
 }
 
-// Таблица Хаффмана.
+// Huffman table
 void JPGDecoder::ParseDHT() {
     std::cout << "--- ParseDHT ---" << std::endl;
     int size = reader_.ReadWord();
@@ -132,8 +130,8 @@ void JPGDecoder::ParseDHT() {
     huffman_trees_.emplace(descriptor, std::move(tree));
 }
 
-// DQT - таблица квантования. Перемножение до применения обратного ДКП
-// Обычно - пара таблиц размера 8x8
+// Table for multiplication before applying inverse DCT
+// Usually is pair of table with 8x8 size
 void JPGDecoder::ParseDQT() {
     std::cout << "--- ParseDQT ---" << std::endl;
     int size = reader_.ReadWord() - DQT_HEADER_SIZE;
@@ -161,10 +159,8 @@ void JPGDecoder::ParseDQT() {
     dqt_tables_[table_id].Dump();
 }
 
-// Если есть маркер SOF0, то изображение закодировано базовым методом
-// not progressive method
-// содержится ширина и высота изображения, компоненты,
-// связь компонент с прореживанием и таблицами квантования
+// SOF0 is marker for base coding method (not progressive)
+// Section had width and height of image and connection with thinning and QTs
 void JPGDecoder::ParseSOF0() {
     std::cout << "--- ParseSOF0 ---" << std::endl;
     int size = reader_.ReadWord();
@@ -217,7 +213,7 @@ void JPGDecoder::ParseSOF0() {
     }
 }
 
-// Закодированное изображение
+// Coded image
 void JPGDecoder::ParseSOS() {
     std::cout << "--- ParseSOS ---" << std::endl;
     uint16_t header_size = reader_.ReadWord();
@@ -314,7 +310,6 @@ SquareMatrixDouble JPGDecoder::GetNextChannelTable(int channel_id) {
         coeffs.resize(coeffs.size()+ac_coeffs.first);
         coeffs.push_back(ac_coeffs.second);
     }
-//    std::cout << "coeffs:\n";
     DumpVector(coeffs);
     auto matrix = SquareMatrixDouble::CreateFromZigZag(kTableSide, coeffs, 0);
 
@@ -351,7 +346,7 @@ std::pair<int, int> JPGDecoder::GetACCoeffs(int channel_id) {
     assert(huffman_tree_pair_it != huffman_trees_.end());
     auto it = huffman_tree_pair_it->second.Begin();
 
-    uint8_t value = GetNextLeafValue(it);
+    auto value = static_cast<uint8_t>(GetNextLeafValue(it));
     if (value == 0) {
         return std::make_pair(-1, 0);
     }
@@ -365,7 +360,6 @@ int JPGDecoder::GetNextLeafValue(HuffmanTreeInt::Iterator& huffman_tree_it) {
     int bit = 0;
     while (!huffman_tree_it.Last()) {
         bit = reader_.ReadBit();
-//        std::cout << bit;
         if (bit == 0) {
             huffman_tree_it.LeftStep();
         } else if (bit == 1) {
@@ -388,7 +382,7 @@ int JPGDecoder::NextBitsToACDCCoeff(int length) {
         }
     }
     if (inversed_value) {
-        value = value - std::pow(2.0, length) + 1;
+        value -= static_cast<int>(std::pow(2.0, length)) - 1;
     }
     return value;
 }
@@ -435,10 +429,6 @@ void JPGDecoder::FillChannel(int channel_id) {
                 for (int x_block_idx = 0; x_block_idx < horizontal_thinning * kTableSide; x_block_idx += kTableSide) {
                     Point upper_left_corner{x+x_block_idx, y+y_block_idx};
                     Point lower_right_corner{upper_left_corner.x+kTableSide, upper_left_corner.y+kTableSide};
-//                    if (channel_table_idx >= channel_tables.size()) {
-//                        channels_.emplace(channel_id, channel);
-//                        return;
-//                    }
                     channel.Map(upper_left_corner, lower_right_corner, channel_tables[channel_table_idx++]);
                 }
             }

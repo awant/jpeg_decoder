@@ -15,8 +15,6 @@
 #include "huffman_tree.h"
 #include "matrix.h"
 
-// https://habr.com/post/102521/
-// https://gitlab.com/slon/shad-cpp/tree/master/jpeg-decoder
 
 Image Decode(const std::string& filename);
 
