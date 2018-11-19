@@ -169,15 +169,16 @@ public:
         return true;
     }
 
-    void Dump(std::ostream& os = std::cout) const {
-        os << "size: " << height_ << "x" << width_ << "\n";
+    friend std::ostream& operator<<(std::ostream& os, const Matrix& matrix) {
+        os << "Matrix\n";
+        os << "size: " << matrix.height_ << "x" << matrix.width_ << "\n";
         os << std::dec;
-        for (size_t i = 0; i < height_; ++i) {
-            for (size_t j = 0; j < width_; ++j) {
-                os << buffer_[i][j] << "\t";
+        for (size_t i = 0; i < matrix.height_; ++i) {
+            for (size_t j = 0; j < matrix.width_; ++j) {
+                os << matrix.buffer_[i][j] << "\t";
             }
-            os << "\n";
         }
+        return os;
     }
 
 protected:

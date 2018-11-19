@@ -6,9 +6,6 @@
 #include <unordered_map>
 #include <fftw3.h>
 
-#define LOGGING_ENABLED
-#include "logger/logger.h"
-
 #include "constants.h"
 #include "image.h"
 #include "reader.h"

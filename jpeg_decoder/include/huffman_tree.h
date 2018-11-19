@@ -20,7 +20,7 @@ public:
     class Iterator {
     public:
         explicit Iterator(Node<T>* node)
-                : current_node_(node) {}
+                : current_node_(node) { }
 
         void LeftStep() {
             assert(current_node_ != nullptr);
@@ -51,7 +51,7 @@ public:
         Node<T>* current_node_ = nullptr;
     };
 
-    HuffmanTree(): tree_(std::make_unique<Node<T>>()) {}
+    HuffmanTree(): tree_(std::make_unique<Node<T>>()) { }
 
     HuffmanTree(HuffmanTree &&htree) noexcept {
         tree_ = std::move(htree.tree_);
@@ -64,9 +64,14 @@ public:
         return Iterator(tree_.get());
     }
 
-    void Dump();
+    friend std::ostream& operator<<(std::ostream& os, const HuffmanTree& tree) {
+        os << "HuffmanTree\n";
+        tree.Dump(tree.tree_.get(), "", os);
+        return os;
+    }
+
 private:
-    void Dump(Node<T>* node, const std::string& cur_path);
+    void Dump(const Node<T>* node, const std::string& cur_path, std::ostream& os) const;
 
     std::unique_ptr<Node<T>> tree_ = nullptr;
 
@@ -126,19 +131,14 @@ void HuffmanTree<T>::SetNewNode(const T& val, int len) {
 }
 
 template<class T>
-void HuffmanTree<T>::Dump() {
-    Dump(tree_.get(), "");
-}
-
-template<class T>
-void HuffmanTree<T>::Dump(Node<T>* node, const std::string& cur_path) {
+void HuffmanTree<T>::Dump(const Node<T>* node, const std::string& cur_path, std::ostream& os) const {
     if ((node->left == nullptr) and (node->right == nullptr)) {
-        std::cout << cur_path << " = " << node->value << "\n";
+        os << cur_path << " = " << node->value << "\n";
     }
     if (node->left != nullptr) {
-        Dump(node->left.get(), cur_path + '0');
+        Dump(node->left.get(), cur_path + '0', os);
     }
     if (node->right != nullptr) {
-        Dump(node->right.get(), cur_path + '1');
+        Dump(node->right.get(), cur_path + '1', os);
     }
 }
