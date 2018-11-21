@@ -3,7 +3,7 @@
 #include <image.h>
 #include <catch.hpp>
 #include <png_encoder.h>
-//#include <libjpg_reader.h>
+#include <libjpg_reader.h>
 
 #include <cmath>
 #include <string>
@@ -42,9 +42,9 @@ void CheckImage(
     const std::string& expected_comment = "",
     bool write_png = true)
 {
-    auto image = Decode("tests/" + filename);
+    auto image = Decode("../tests/" + filename);
     REQUIRE(image.GetComment() == expected_comment);
-    auto ok_image = Image();//ReadJpg("tests/" + filename);
+    auto ok_image = ReadJpg("../tests/" + filename);
     Compare(image, ok_image);
     if (write_png) {
         auto dot_pos = filename.find(".");

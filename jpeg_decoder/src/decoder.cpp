@@ -174,8 +174,8 @@ void JPGDecoder::ParseSOF0() {
     height_ = reader_.ReadWord();
     width_ = reader_.ReadWord();
 
-    int components_count = reader_.ReadByte();
-    if (components_count != kComponentsCount) {
+    uint8_t components_count = reader_.ReadByte();
+    if (components_count == 0 || components_count > kComponentsCount) {
         throw std::runtime_error("SOF0 wrong components count");
     }
 
@@ -216,11 +216,11 @@ void JPGDecoder::ParseSOS() {
     LOG_DEBUG << "--- ParseSOS ---";
     uint16_t header_size = reader_.ReadWord();
     LOG_DEBUG << "header_size: " << std::dec << header_size;
-    int components_count = reader_.ReadByte();
-    if (components_count != kComponentsCount) {
+    uint8_t components_count = reader_.ReadByte();
+    if (components_count != sof0_descriptors_.size()) {
         throw std::runtime_error("SOS wrong components count");
     }
-    channels_ids_.reserve(components_count);
+    channels_ids_.reserve(static_cast<int>(components_count));
 
     for (int component_idx = 0; component_idx < components_count; ++component_idx) {
         int channel_id = reader_.ReadByte();
@@ -440,6 +440,10 @@ Image JPGDecoder::GetRGBImage() {
                 int y_local = y / sof0_descriptors_[channel_id].vertical_thinning_ratio;
                 int x_local = x / sof0_descriptors_[channel_id].horizontal_thinning_ratio;
                 yCbCr.push_back(channels_[channel_id].at(y_local, x_local));
+            }
+            // if we have less channels numbers than kComponentsCount:
+            for (size_t i = channels_ids_.size(); i < kComponentsCount; ++i) {
+                yCbCr.push_back(0);
             }
             auto pixel = YCbCrToRGB(yCbCr[0], yCbCr[1], yCbCr[2]);
             image.SetPixel(y, x, pixel);

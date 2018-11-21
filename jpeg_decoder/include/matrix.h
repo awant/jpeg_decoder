@@ -177,6 +177,7 @@ public:
             for (size_t j = 0; j < matrix.width_; ++j) {
                 os << matrix.buffer_[i][j] << "\t";
             }
+            os << "\n";
         }
         return os;
     }
