@@ -1,5 +1,6 @@
 #include <cmath>
 #include <tiffio.h>
+#include <sstream>
 
 #include "logger.h"
 #include "decoder.h"
@@ -84,7 +85,7 @@ void JPGDecoder::ParseNextSection() {
 }
 
 void JPGDecoder::ParseComment() {
-    LOG_DEBUG << "--- ParseComment ---";
+    LOG_DEBUG << "--- ParseComment, OFFSET: " << GetSectionOffset() << " ---";
     int comment_size = reader_.ReadWord() - COMMENT_HEADER_SIZE;
     if (comment_size <= 0) {
         throw std::runtime_error("comment size corrupted");
@@ -97,7 +98,7 @@ void JPGDecoder::ParseComment() {
 
 // Huffman table
 void JPGDecoder::ParseDHT() {
-    LOG_DEBUG << "--- ParseDHT ---";
+    LOG_DEBUG << "--- ParseDHT, OFFSET: " << GetSectionOffset() << " ---";
     int size = reader_.ReadWord();
     if (size <= 0) {
         throw std::runtime_error("DHT size corrupted");
@@ -131,7 +132,7 @@ void JPGDecoder::ParseDHT() {
 // Table for multiplication before applying inverse DCT
 // Usually is pair of table with 8x8 size
 void JPGDecoder::ParseDQT() {
-    LOG_DEBUG << "--- ParseDQT ---";
+    LOG_DEBUG << "--- ParseDQT, OFFSET: " << GetSectionOffset() << " ---";
     int size = reader_.ReadWord() - DQT_HEADER_SIZE;
     if (size <= 0) {
         throw std::runtime_error("DQT size corrupted");
@@ -160,7 +161,7 @@ void JPGDecoder::ParseDQT() {
 // SOF0 is marker for base coding method (not progressive)
 // Section had width and height of image and connection with thinning and QTs
 void JPGDecoder::ParseSOF0() {
-    LOG_DEBUG << "--- ParseSOF0 ---";
+    LOG_DEBUG << "--- ParseSOF0, OFFSET: " << GetSectionOffset() << " ---";
     int size = reader_.ReadWord();
     if (size <= kSOF0HeaderSize) {
         throw std::runtime_error("SOF0 size corrupted");
@@ -180,7 +181,7 @@ void JPGDecoder::ParseSOF0() {
     }
 
     LOG_DEBUG << "precision: " << std::dec << precision
-              << " size: (" << height_ << ", " << width_ << ") "
+              << " size: (" << width_ << ", " << height_ <<  ") "
               << "components: " << components_count;
 
     int max_horizontal_thinning = 0, max_vertical_thinning = 0;
@@ -213,7 +214,7 @@ void JPGDecoder::ParseSOF0() {
 
 // Coded image
 void JPGDecoder::ParseSOS() {
-    LOG_DEBUG << "--- ParseSOS ---";
+    LOG_DEBUG << "--- ParseSOS, OFFSET: " << GetSectionOffset() << " ---";
     uint16_t header_size = reader_.ReadWord();
     LOG_DEBUG << "header_size: " << std::dec << header_size;
     uint8_t components_count = reader_.ReadByte();
@@ -248,6 +249,13 @@ void JPGDecoder::ParseSOS() {
     }
     // Read and decode real data
     FillChannelTables();
+}
+
+std::string JPGDecoder::GetSectionOffset() const {
+    const int marker_bytes_size = 2;
+    std::stringstream sstream;
+    sstream << "0x" << std::hex << (static_cast<size_t>(reader_.GetOffset()) - marker_bytes_size);
+    return sstream.str();
 }
 
 void JPGDecoder::FillChannelTables() {

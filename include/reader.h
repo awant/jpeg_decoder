@@ -19,6 +19,7 @@ public:
     bool IsEnded() const;
     bool IsCacheEmpty() const;
     uint16_t lastReadWord() const;
+    size_t GetOffset() const;
 
 private:
     std::istream& stream_;
@@ -26,6 +27,7 @@ private:
 
     uint8_t cache_ = 0;
     int cache_size_ = MAX_CACHE_SIZE; // CACHE_SIZE means cache is empty
+    double offset_ = 0;
 
     uint8_t ReadRawByte(); // read byte directly from stream
 };
