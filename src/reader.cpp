@@ -9,9 +9,9 @@ uint8_t ByteStreamReader::ReadRawByte() {
         throw std::runtime_error("Can't read stream");
     }
     last_read_word_ = (last_read_word_ << 8) | byte;
-    if (last_read_word_ == 0xffd9) {
-        throw std::runtime_error("Read end marker");
-    }
+//    if (last_read_word_ == 0xffd9) {
+//        throw std::runtime_error("Read end marker");
+//    }
     return byte;
 }
 

@@ -44,7 +44,7 @@ namespace da {
         std::ostream &ofs_;
         static bool enable_;
     };
-    bool LogMessage::enable_ = true;
+    bool LogMessage::enable_ = false;
 }
 
 #define LOG(type)        da::LogMessage(#type).stream()

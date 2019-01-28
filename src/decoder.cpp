@@ -75,6 +75,9 @@ void JPGDecoder::ParseNextSection() {
         case MARKER_SOS:
             ParseSOS();
             break;
+        case MARKER_APP1:
+            ParseAPP1();
+            break;
         case MARKER_END:
             LOG_DEBUG << "DONE";
             is_parsing_done_ = true;
@@ -251,10 +254,19 @@ void JPGDecoder::ParseSOS() {
     FillChannelTables();
 }
 
+void JPGDecoder::ParseAPP1() {
+    LOG_DEBUG << "--- ParseAPP1, OFFSET: " << GetSectionOffset() << " ---";
+    const int header_byte_size = 2;
+    const int size = reader_.ReadWord() - header_byte_size;
+    for (int i = 0; i < size; ++i) {
+        reader_.ReadByte();
+    }
+}
+
 std::string JPGDecoder::GetSectionOffset() const {
     const int marker_bytes_size = 2;
     std::stringstream sstream;
-    sstream << "0x" << std::hex << (static_cast<size_t>(reader_.GetOffset()) - marker_bytes_size);
+    sstream << "0x" << std::hex << (reader_.GetOffset() - marker_bytes_size);
     return sstream.str();
 }
 

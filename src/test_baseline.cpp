@@ -9,18 +9,18 @@
 //    CheckImage("lenna.jpg");
 //}
 //
-TEST_CASE("jfif (4:2:2)", "[jpg]") {
-    CheckImage("bad_quality.jpg", "so quality");
-}
+//TEST_CASE("jfif (4:2:2)", "[jpg]") {
+//    CheckImage("bad_quality.jpg", "so quality");
+//}
 //
 //TEST_CASE("tiny jfif (4:4:4)", "[jpg]") {
 //    CheckImage("tiny.jpg");
 //}
 
-//TEST_CASE("exif (4:2:2)", "[jpg]") {
-//    CheckImage("chroma_halfed.jpg");
-//}
-//
+TEST_CASE("exif (4:2:2)", "[jpg]") {
+    CheckImage("chroma_halfed.jpg");
+}
+
 //TEST_CASE("exif (grayscale)", "[jpg]") {
 //    CheckImage("grayscale.jpg");
 //}
