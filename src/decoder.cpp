@@ -78,6 +78,9 @@ void JPGDecoder::ParseNextSection() {
         case MARKER_APP1:
             ParseAPP1();
             break;
+        case MARKER_APP0:
+            ParseAPP0();
+            break;
         case MARKER_END:
             LOG_DEBUG << "DONE";
             is_parsing_done_ = true;
@@ -252,6 +255,15 @@ void JPGDecoder::ParseSOS() {
     }
     // Read and decode real data
     FillChannelTables();
+}
+
+void JPGDecoder::ParseAPP0() {
+    LOG_DEBUG << "--- ParseAPP0, OFFSET: " << GetSectionOffset() << " ---";
+    const int header_byte_size = 2;
+    const int size = reader_.ReadWord() - header_byte_size;
+    for (int i = 0; i < size; ++i) {
+        reader_.ReadByte();
+    }
 }
 
 void JPGDecoder::ParseAPP1() {
@@ -458,7 +470,11 @@ Image JPGDecoder::GetRGBImage() {
             for (int channel_id: channels_ids_) {
                 int y_local = y / sof0_descriptors_[channel_id].vertical_thinning_ratio;
                 int x_local = x / sof0_descriptors_[channel_id].horizontal_thinning_ratio;
-                yCbCr.push_back(channels_[channel_id].at(y_local, x_local));
+                double point = 0;
+                if ((y_local < channels_[channel_id].GetHeight()) && (x_local < channels_[channel_id].GetWidth())) {
+                    point = channels_[channel_id].at(y_local, x_local);
+                }
+                yCbCr.push_back(point);
             }
             // if we have less channels numbers than kComponentsCount:
             for (size_t i = channels_ids_.size(); i < kComponentsCount; ++i) {

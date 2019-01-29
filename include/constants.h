@@ -12,6 +12,7 @@ const uint16_t MARKER_SOF0 = 0xffc0;
 const uint16_t MARKER_DHT = 0xffc4;
 const uint16_t MARKER_SOS = 0xffda;
 const uint16_t MARKER_END = 0xffd9;
+const uint16_t MARKER_APP0 = 0xffe0;
 const uint16_t MARKER_APP1 = 0xffe1;
 
 const int COMMENT_HEADER_SIZE = 2;
