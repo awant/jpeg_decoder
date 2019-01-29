@@ -75,17 +75,15 @@ void JPGDecoder::ParseNextSection() {
         case MARKER_SOS:
             ParseSOS();
             break;
-        case MARKER_APP1:
-            ParseAPP1();
-            break;
-        case MARKER_APP0:
-            ParseAPP0();
-            break;
         case MARKER_END:
             LOG_DEBUG << "DONE";
             is_parsing_done_ = true;
             break;
         default:
+            const int app_idx = marker - MARKER_APP0;
+            if ((app_idx >= 0) && (app_idx <= 0xf)) {
+                ParseAPPn();
+            }
             break;
     }
 }
@@ -105,34 +103,45 @@ void JPGDecoder::ParseComment() {
 // Huffman table
 void JPGDecoder::ParseDHT() {
     LOG_DEBUG << "--- ParseDHT, OFFSET: " << GetSectionOffset() << " ---";
-    int size = reader_.ReadWord();
-    if (size <= 0) {
-        throw std::runtime_error("DHT size corrupted");
-    }
-    auto coeff_type = static_cast<CoeffType>(reader_.ReadHalfByte());
-    int table_id = reader_.ReadHalfByte();
-    LOG_DEBUG << "type: " << coeff_type << " table id: " << table_id;
-
-    std::vector<int> codes_counters(MAX_HUFFMAN_CODE_LEN);
-    size_t codes_counter = 0;
-    for (size_t i = 0; i < MAX_HUFFMAN_CODE_LEN; ++i) {
-        codes_counters[i] = reader_.ReadByte();
-        codes_counter += codes_counters[i];
-        LOG_DEBUG << "Codes of length " << i << " bits: " << codes_counters[i];
-    }
-    if (static_cast<int>(DHT_HEADER_SIZE + MAX_HUFFMAN_CODE_LEN + codes_counter) != size) {
-        throw std::runtime_error("DHT body corrupted");
-    }
-    std::vector<int> values(codes_counter);
-    for (size_t i = 0; i < codes_counter; ++i) {
-        values[i] = reader_.ReadByte();
+    int size = reader_.ReadWord() - DHT_HEADER_SIZE;
+    if (size <= 1) {
+        throw std::runtime_error("DHT corrupted, should be at least one DH");
     }
 
-    DHTDescriptor descriptor{table_id, coeff_type};
+    while (size > 1) { // One DHT can have several DHs
+        const auto coeff_type = static_cast<CoeffType>(reader_.ReadHalfByte());
+        const int table_id = reader_.ReadHalfByte();
+        --size;
+        LOG_DEBUG << "type: " << coeff_type << " table id: " << table_id;
 
-    HuffmanTree<int> tree(codes_counters, values);
-    LOG_DEBUG << tree;
-    huffman_trees_.emplace(descriptor, std::move(tree));
+        std::vector<int> codes_counters(MAX_HUFFMAN_CODE_LEN);
+        size_t codes_counter = 0;
+        for (size_t i = 0; i < MAX_HUFFMAN_CODE_LEN; ++i) {
+            codes_counters[i] = reader_.ReadByte();
+            if (size <= 0) {
+                throw std::runtime_error("DHT corrupted");
+            }
+            --size;
+            codes_counter += codes_counters[i];
+            LOG_DEBUG << "Codes of length " << i << " bits: " << codes_counters[i];
+        }
+        if (size < codes_counter) {
+            throw std::runtime_error("DHT corrupted, can't read codes counters");
+        }
+        std::vector<int> values(codes_counter);
+        for (auto& val: values) {
+            val = reader_.ReadByte();
+            --size;
+        }
+
+        DHTDescriptor descriptor{table_id, coeff_type};
+        HuffmanTree<int> tree(codes_counters, values);
+        LOG_DEBUG << tree;
+        huffman_trees_.emplace(descriptor, std::move(tree));
+    }
+    if (size != 0) {
+        throw std::runtime_error("DHT corrupted, has strange appendix");
+    }
 }
 
 // Table for multiplication before applying inverse DCT
@@ -140,28 +149,36 @@ void JPGDecoder::ParseDHT() {
 void JPGDecoder::ParseDQT() {
     LOG_DEBUG << "--- ParseDQT, OFFSET: " << GetSectionOffset() << " ---";
     int size = reader_.ReadWord() - DQT_HEADER_SIZE;
-    if (size <= 0) {
+    if (size <= 1) {
         throw std::runtime_error("DQT size corrupted");
     }
-    int value_size = reader_.ReadHalfByte() + 1; // size of value in table in bytes: 0 -> 1, 1 -> 2
-    if ((value_size != 1) && (value_size != 2)) {
-        throw std::runtime_error("DQT wrong value size");
-    }
-    int table_id = reader_.ReadHalfByte();
-    auto values_count = static_cast<size_t>(size);
-    if (values_count != kTableSide * kTableSide) {
-        throw std::runtime_error("DQT wrong values count");
+
+    while (size > 1) { // One DQT can have several DQs
+        const int value_size = reader_.ReadHalfByte() + 1; // size of value in table in bytes: 0 -> 1, 1 -> 2
+        if ((value_size != 1) && (value_size != 2)) {
+            throw std::runtime_error("DQT wrong value size");
+        }
+        const int table_id = reader_.ReadHalfByte();
+        --size;
+        LOG_DEBUG << "value size: " << value_size  << ", table id: " << table_id;
+
+        if (size < value_size * kTableSide * kTableSide) {
+            throw std::runtime_error("DQT size corrupted");
+        }
+
+        std::vector<int> values(kTableSide * kTableSide);
+        for (auto& val: values) {
+            val = value_size == 1 ? reader_.ReadByte() : reader_.ReadWord();
+            size -= value_size;
+        }
+
+        dqt_tables_.emplace(table_id, SquareMatrix<int>::CreateFromZigZag(kTableSide, values, 0xff));
+        LOG_DEBUG << dqt_tables_[table_id];
     }
 
-    LOG_DEBUG << "values count: " << values_count << " table id: " << table_id;
-
-    std::vector<int> values(values_count);
-    for (size_t i = 0; i < values_count; ++i) {
-        values[i] = value_size == 1 ? reader_.ReadByte() : reader_.ReadWord();
+    if (size != 0) {
+        throw std::runtime_error("DQT size corrupted");
     }
-    dqt_tables_.emplace(table_id, SquareMatrix<int>::CreateFromZigZag(kTableSide, values, 0xff));
-
-    LOG_DEBUG << dqt_tables_[table_id];
 }
 
 // SOF0 is marker for base coding method (not progressive)
@@ -257,17 +274,8 @@ void JPGDecoder::ParseSOS() {
     FillChannelTables();
 }
 
-void JPGDecoder::ParseAPP0() {
-    LOG_DEBUG << "--- ParseAPP0, OFFSET: " << GetSectionOffset() << " ---";
-    const int header_byte_size = 2;
-    const int size = reader_.ReadWord() - header_byte_size;
-    for (int i = 0; i < size; ++i) {
-        reader_.ReadByte();
-    }
-}
-
-void JPGDecoder::ParseAPP1() {
-    LOG_DEBUG << "--- ParseAPP1, OFFSET: " << GetSectionOffset() << " ---";
+void JPGDecoder::ParseAPPn() {
+    LOG_DEBUG << "--- ParseAPPn, OFFSET: " << GetSectionOffset() << " ---";
     const int header_byte_size = 2;
     const int size = reader_.ReadWord() - header_byte_size;
     for (int i = 0; i < size; ++i) {

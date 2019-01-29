@@ -89,7 +89,7 @@ private:
     void ParseSOF0();
     void ParseSOS();
     void ParseAPP0();
-    void ParseAPP1();
+    void ParseAPPn();
 
     std::string GetSectionOffset() const;
 
