@@ -44,6 +44,7 @@ namespace da {
         std::ostream &ofs_;
         static bool enable_;
     };
+    // set to "true" to enable logging
     bool LogMessage::enable_ = false;
 }
 

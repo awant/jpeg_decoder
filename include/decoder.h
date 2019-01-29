@@ -88,7 +88,6 @@ private:
     void ParseDQT();
     void ParseSOF0();
     void ParseSOS();
-    void ParseAPP0();
     void ParseAPPn();
 
     std::string GetSectionOffset() const;
