@@ -1,4 +1,3 @@
-//#include <catch.hpp>
 #include "test_commons.h"
 
 TEST_CASE("small jfif (4:2:0)", "[jpg]") {
@@ -39,7 +38,12 @@ TEST_CASE("photoshop (4:4:4)", "[jpg]") {
 
 TEST_CASE("Error handling", "[jpg]") {
     const size_t tests_count = 24;
+    // tests: 10, 14, 18, 21, 23 (you can see these imgs on osx)
+    std::vector<int> special_tests = {10, 14, 18, 21, 23};
     for (size_t i = 1; i <= tests_count; ++i) {
+        if (std::find(special_tests.begin(), special_tests.end(), i) != special_tests.end()) {
+            continue;
+        }
         ExpectFail("bad" + std::to_string(i) + ".jpg");
     }
 }

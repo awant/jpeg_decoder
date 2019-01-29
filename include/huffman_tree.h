@@ -40,7 +40,7 @@ public:
             if (current_node_ == nullptr) {
                 throw std::runtime_error("Empty node");
             }
-            return (current_node_->left.get() == nullptr) and (current_node_->right.get() == nullptr);
+            return (current_node_->left.get() == nullptr) && (current_node_->right.get() == nullptr);
         }
 
         T& operator*() {
@@ -132,7 +132,7 @@ void HuffmanTree<T>::SetNewNode(const T& val, int len) {
 
 template<class T>
 void HuffmanTree<T>::Dump(const Node<T>* node, const std::string& cur_path, std::ostream& os) const {
-    if ((node->left == nullptr) and (node->right == nullptr)) {
+    if ((node->left == nullptr) && (node->right == nullptr)) {
         os << cur_path << " = " << node->value << "\n";
     }
     if (node->left != nullptr) {

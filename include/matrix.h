@@ -198,7 +198,7 @@ public:
         return result;
     }
 
-    SquareMatrix() { }
+    SquareMatrix() = default;
 
     SquareMatrix(size_t size, const T& default_value)
             : Matrix<T>(size, default_value) {}

@@ -9,9 +9,6 @@ uint8_t ByteStreamReader::ReadRawByte() {
         throw std::runtime_error("Can't read stream");
     }
     last_read_word_ = (last_read_word_ << 8) | byte;
-    if (last_read_word_ == 0xffd9) {
-        throw std::runtime_error("Read end marker");
-    }
     return byte;
 }
 
@@ -28,6 +25,7 @@ uint8_t ByteStreamReader::ReadBit() {
     uint8_t result = cache_ >> 7;
     cache_ <<= 1;
     ++cache_size_;
+    offset_ += 1./8;
     return result;
 }
 
@@ -36,11 +34,13 @@ uint8_t ByteStreamReader::ReadByte() {
     cache_ = ReadRawByte();
     result = (result << cache_size_) | (cache_ >> (MAX_CACHE_SIZE - cache_size_));
     cache_ <<= cache_size_;
+    ++offset_;
     return result;
 }
 
 uint8_t ByteStreamReader::ReadHalfByte() {
-    if (cache_size_ <= 4) { // when we have half of byte in cache, just get it
+    offset_ += 0.5;
+    if (cache_size_ <= 4) { // when we have half of byte in cache, just return it
         uint8_t result = cache_ >> 4;
         cache_ <<= 4;
         cache_size_ += 4;
@@ -64,6 +64,7 @@ uint16_t ByteStreamReader::ReadWord() {
 
 void ByteStreamReader::Read(char* buffer, size_t size) {
     stream_.read(buffer, size);
+    offset_ += stream_.gcount();
     if (stream_.eof() || (stream_.gcount() != size)) {
         throw std::runtime_error("Can't read all buffer");
     }
@@ -84,4 +85,8 @@ bool ByteStreamReader::IsCacheEmpty() const {
 
 uint16_t ByteStreamReader::lastReadWord() const {
     return last_read_word_;
+}
+
+size_t ByteStreamReader::GetOffset() const {
+    return static_cast<size_t>(offset_);
 }

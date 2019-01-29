@@ -88,6 +88,9 @@ private:
     void ParseDQT();
     void ParseSOF0();
     void ParseSOS();
+    void ParseAPPn();
+
+    std::string GetSectionOffset() const;
 
     int NextBitsToACDCCoeff(int length);
     int GetNextLeafValue(HuffmanTreeInt::Iterator& huffman_tree_it);
