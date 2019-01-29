@@ -462,8 +462,6 @@ Image JPGDecoder::GetRGBImage() {
     auto image = Image(width_, height_);
     image.SetComment(comment_);
 
-    int k = 0;
-
     for (uint32_t y = 0; y < height_; ++y) {
         for (uint32_t x = 0; x < width_; ++x) {
             std::vector<int> yCbCr;
@@ -482,7 +480,6 @@ Image JPGDecoder::GetRGBImage() {
             }
             auto pixel = YCbCrToRGB(yCbCr[0], yCbCr[1], yCbCr[2]);
             image.SetPixel(y, x, pixel);
-            ++k;
         }
     }
     return image;
