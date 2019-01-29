@@ -197,6 +197,9 @@ void JPGDecoder::ParseSOF0() {
 
     height_ = reader_.ReadWord();
     width_ = reader_.ReadWord();
+    if (height_ * width_ == 0) {
+        throw std::runtime_error("Zero size of image");
+    }
 
     uint8_t components_count = reader_.ReadByte();
     if (components_count == 0 || components_count > kComponentsCount) {
@@ -373,7 +376,9 @@ std::pair<int, int> JPGDecoder::GetACCoeffs(int channel_id) {
     int table_id = sos_descriptors_[channel_id].huffman_table_ac_id;
     DHTDescriptor descriptor{table_id, AC};
     const auto& huffman_tree_pair_it = huffman_trees_.find(descriptor);
-    assert(huffman_tree_pair_it != huffman_trees_.end());
+    if (huffman_tree_pair_it == huffman_trees_.end()) {
+        throw std::runtime_error("Huffman tree is exceeded");
+    }
     auto it = huffman_tree_pair_it->second.Begin();
 
     auto value = static_cast<uint8_t>(GetNextLeafValue(it));
@@ -419,6 +424,9 @@ int JPGDecoder::NextBitsToACDCCoeff(int length) {
 
 void JPGDecoder::MakeIDCTransform() {
     LOG_DEBUG << "--- MakeIDCTransform ---";
+    if (channels_ids_.empty()) {
+        throw std::runtime_error("empty channel ids");
+    }
     for (int channel_id: channels_ids_) { // for every channel
         for (auto& channel_table: channel_tables_[channel_id]) {
             matrix_transformer_.MakeIDCTransform(&channel_table);
@@ -457,6 +465,9 @@ void JPGDecoder::FillChannel(int channel_id) {
                 for (int x_block_idx = 0; x_block_idx < horizontal_thinning * kTableSide; x_block_idx += kTableSide) {
                     Point upper_left_corner{x+x_block_idx, y+y_block_idx};
                     Point lower_right_corner{upper_left_corner.x+kTableSide, upper_left_corner.y+kTableSide};
+                    if (channel_table_idx >= channel_tables.size()) {
+                        throw std::runtime_error("Channel tables size overload");
+                    }
                     channel.Map(upper_left_corner, lower_right_corner, channel_tables[channel_table_idx++]);
                 }
             }
